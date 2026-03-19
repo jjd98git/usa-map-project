@@ -544,6 +544,27 @@
     legend.addTo(map);
 
     // --- Loan tape parsing ---
+    // Freddie Mac CRT Reference Pool Disclosure Layout (v3.7, 90 fields, pipe-delimited, NO header row)
+    // Key field positions (0-indexed):
+    //   0  = Period (CCYYMM)
+    //   1  = Reference Pool Number
+    //   2  = Loan Identifier
+    //   3  = Amortization Type
+    //   4  = Seller Name
+    //   5  = Property State (2-letter)
+    //   6  = Postal Code (3-digit ZIP)
+    //   7  = MSA / Metropolitan Division (5-digit CBSA)
+    //  12  = Original UPB
+    //  13  = UPB at Issuance
+    //  22  = Credit Score (FICO at origination)
+    //  23  = Original LTV
+    //  24  = Original CLTV
+    //  25  = Original DTI
+    //  39  = Current Actual UPB
+    //  59  = Estimated LTV (quarterly)
+    const FMC = { MSA: 7, ZIP: 6, STATE: 5, ORIG_UPB: 12, UPB_ISSUANCE: 13,
+                  FICO: 22, OLTV: 23, OCLTV: 24, DTI: 25, CUR_UPB: 39, ELTV: 59 };
+
     document.getElementById('file-input').addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -551,15 +572,14 @@
 
       const reader = new FileReader();
       reader.onload = function(evt) {
-        const text = evt.target.result;
-        parseLoanTape(text, file.name);
+        parseLoanTape(evt.target.result, file.name);
       };
       reader.readAsText(file);
     });
 
     function parseLoanTape(text, filename) {
       const lines = text.trim().split('\n');
-      if (lines.length < 2) {
+      if (lines.length < 1) {
         document.getElementById('upload-status').textContent = 'Error: File appears empty';
         return;
       }
@@ -567,71 +587,119 @@
       // Detect delimiter
       const firstLine = lines[0];
       let delimiter = '|';
-      if (firstLine.includes('\t') && !firstLine.includes('|')) delimiter = '\t';
-      else if (firstLine.includes(',') && !firstLine.includes('|')) delimiter = ',';
+      if (!firstLine.includes('|')) {
+        if (firstLine.includes('\t')) delimiter = '\t';
+        else if (firstLine.includes(',')) delimiter = ',';
+      }
 
-      const headers = firstLine.split(delimiter).map(h => h.trim().toUpperCase().replace(/"/g, ''));
+      const firstCols = firstLine.split(delimiter);
+      let fieldMap = null;
+      let startRow = 0;
 
-      // Find MSA and UPB columns — try common Freddie Mac field names
-      let msaIdx = headers.findIndex(h =>
-        h === 'MSA' || h === 'METRO_STAT_AREA' || h === 'METROPOLITAN_STATISTICAL_AREA' ||
-        h === 'MSA_CODE' || h === 'CBSA' || h === 'MSA_CD'
-      );
-      let upbIdx = headers.findIndex(h =>
-        h === 'ORIG_UPB' || h === 'ORIGINAL_UPB' || h === 'CURRENT_UPB' || h === 'CUR_UPB' ||
-        h === 'UPB' || h === 'ORIG_AMT' || h === 'LOAN_AMOUNT' || h === 'ORIGINAL_LOAN_AMOUNT'
-      );
-      let zipIdx = headers.findIndex(h =>
-        h === 'ZIP' || h === 'POSTAL_CODE' || h === 'ZIP_CODE' || h === 'POSTAL_CD' || h === 'ZIP_3'
-      );
+      // Detect if this is a headerless Freddie Mac CRT file (typically 80-90+ pipe fields)
+      if (delimiter === '|' && firstCols.length >= 40) {
+        // Check if first row looks like data (field 0 = CCYYMM period, field 7 = 5-digit MSA)
+        const f0 = firstCols[0]?.trim();
+        const f7 = firstCols[7]?.trim();
+        const isFMCData = /^\d{6}$/.test(f0) && (/^\d{5}$/.test(f7) || f7 === '');
 
-      // If no header match, try positional for Freddie Mac standard layout
-      // Freddie Mac SFLLD: field 7 = MSA (0-indexed), field 11 = Original UPB, field 18 = Postal Code
-      if (msaIdx === -1 && headers.length > 18) {
-        // Check if this looks like headerless Freddie Mac data
-        const testRow = lines[1].split(delimiter);
-        if (testRow.length > 18) {
-          const possibleMSA = testRow[7]?.trim();
-          const possibleUPB = testRow[11]?.trim();
-          if (/^\d{5}$/.test(possibleMSA) && /^\d+$/.test(possibleUPB)) {
-            msaIdx = 7;
-            upbIdx = 11;
-            zipIdx = 18;
+        if (isFMCData) {
+          // Headerless Freddie Mac CRT format
+          fieldMap = FMC;
+          startRow = 0;
+        } else {
+          // Has a header row — check if it matches the disclosure-header.txt format
+          const h = firstCols.map(c => c.trim().toUpperCase());
+          if (h.includes('MSA') || h.some(x => x.includes('METROPOLITAN'))) {
+            fieldMap = {
+              MSA: h.findIndex(x => x === 'MSA' || x.includes('METROPOLITAN')),
+              ZIP: h.findIndex(x => x === 'POSTAL CODE' || x.includes('POSTAL')),
+              STATE: h.findIndex(x => x === 'PROPERTY STATE'),
+              ORIG_UPB: h.findIndex(x => x === 'ORIGINAL UPB' || x.includes('ORIG') && x.includes('UPB')),
+              UPB_ISSUANCE: h.findIndex(x => x === 'UPB AT ISSUANCE'),
+              FICO: h.findIndex(x => x === 'CREDIT SCORE' || x === 'FICO'),
+              OLTV: h.findIndex(x => x.includes('ORIGINAL') && x.includes('LTV') && !x.includes('COMBINED')),
+              OCLTV: h.findIndex(x => x.includes('ORIGINAL') && x.includes('CLTV')),
+              DTI: h.findIndex(x => x.includes('DTI') || x.includes('DEBT-TO-INCOME')),
+              CUR_UPB: h.findIndex(x => x === 'CURRENT ACTUAL UPB' || (x.includes('CURRENT') && x.includes('UPB'))),
+              ELTV: h.findIndex(x => x.includes('ESTIMATED') && x.includes('LTV'))
+            };
+            startRow = 1;
           }
         }
       }
 
-      if (msaIdx === -1) {
-        document.getElementById('upload-status').textContent =
-          'Could not find MSA column. Expected: MSA, MSA_CODE, CBSA, or METRO_STAT_AREA';
-        return;
+      // Fallback: try generic CSV/TSV header detection
+      if (!fieldMap) {
+        const h = firstCols.map(c => c.trim().toUpperCase().replace(/"/g, ''));
+        const msaIdx = h.findIndex(x =>
+          x === 'MSA' || x === 'MSA_CODE' || x === 'CBSA' || x === 'MSA_CD' || x.includes('METROPOLITAN')
+        );
+        if (msaIdx !== -1) {
+          fieldMap = {
+            MSA: msaIdx,
+            ZIP: h.findIndex(x => /^(ZIP|POSTAL|ZIP_CODE|ZIP_3)/.test(x)),
+            STATE: h.findIndex(x => x === 'STATE' || x === 'PROPERTY_STATE' || x === 'PROPERTY STATE'),
+            ORIG_UPB: h.findIndex(x => /UPB|LOAN.?AMOUNT|ORIG.?AMT/.test(x)),
+            FICO: h.findIndex(x => /FICO|CREDIT.?SCORE/.test(x)),
+            OLTV: h.findIndex(x => /^O?LTV$|ORIGINAL.*LTV/.test(x)),
+            DTI: h.findIndex(x => /DTI|DEBT/.test(x)),
+            CUR_UPB: -1, UPB_ISSUANCE: -1, OCLTV: -1, ELTV: -1
+          };
+          startRow = 1;
+        } else {
+          document.getElementById('upload-status').textContent =
+            'Could not detect format. Expected Freddie Mac CRT pipe-delimited file or CSV with MSA column.';
+          return;
+        }
       }
 
       // Aggregate by MSA
       const msaAgg = {};
       let totalLoans = 0;
       let totalUPB = 0;
-      const startRow = headers.some(h => /^[A-Z_]+$/.test(h)) ? 1 : 0; // skip header if present
 
       for (let i = startRow; i < lines.length; i++) {
-        const cols = lines[i].split(delimiter).map(c => c.trim().replace(/"/g, ''));
-        const msa = cols[msaIdx];
-        if (!msa || msa === '' || msa === '00000' || msa === '     ') continue;
+        const line = lines[i].trim();
+        if (!line) continue;
+        const cols = line.split(delimiter);
 
-        const upb = upbIdx !== -1 ? parseFloat(cols[upbIdx]) || 0 : 0;
-        const zip = zipIdx !== -1 ? cols[zipIdx] : '';
+        const msa = (cols[fieldMap.MSA] || '').trim();
+        if (!msa || msa.length < 4 || /^0+$/.test(msa)) continue;
+
+        const origUPB = fieldMap.ORIG_UPB >= 0 ? parseFloat(cols[fieldMap.ORIG_UPB]) || 0 : 0;
+        const curUPB = fieldMap.CUR_UPB >= 0 ? parseFloat(cols[fieldMap.CUR_UPB]) || 0 : 0;
+        const fico = fieldMap.FICO >= 0 ? parseInt(cols[fieldMap.FICO]) || 0 : 0;
+        const oltv = fieldMap.OLTV >= 0 ? parseInt(cols[fieldMap.OLTV]) || 0 : 0;
+        const dti = fieldMap.DTI >= 0 ? parseInt(cols[fieldMap.DTI]) || 0 : 0;
+        const zip = fieldMap.ZIP >= 0 ? (cols[fieldMap.ZIP] || '').trim() : '';
+        const state = fieldMap.STATE >= 0 ? (cols[fieldMap.STATE] || '').trim() : '';
 
         if (!msaAgg[msa]) {
-          msaAgg[msa] = { count: 0, totalUPB: 0, zips: new Set() };
+          msaAgg[msa] = {
+            count: 0, totalOrigUPB: 0, totalCurUPB: 0,
+            ficos: [], ltvs: [], dtis: [],
+            zips: new Set(), states: new Set()
+          };
         }
-        msaAgg[msa].count++;
-        msaAgg[msa].totalUPB += upb;
-        if (zip) msaAgg[msa].zips.add(zip);
+        const agg = msaAgg[msa];
+        agg.count++;
+        agg.totalOrigUPB += origUPB;
+        agg.totalCurUPB += curUPB;
+        if (fico > 300 && fico < 900) agg.ficos.push(fico);
+        if (oltv > 0 && oltv <= 200) agg.ltvs.push(oltv);
+        if (dti > 0 && dti <= 100) agg.dtis.push(dti);
+        if (zip) agg.zips.add(zip);
+        if (state) agg.states.add(state);
         totalLoans++;
-        totalUPB += upb;
+        totalUPB += origUPB;
       }
 
       displayLoanData(msaAgg, totalLoans, totalUPB);
+    }
+
+    function avg(arr) {
+      return arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
     }
 
     function displayLoanData(msaAgg, totalLoans, totalUPB) {
@@ -643,9 +711,7 @@
         return;
       }
 
-      // Find max for scaling
       const maxCount = Math.max(...msaCodes.map(m => msaAgg[m].count));
-      const maxUPB = Math.max(...msaCodes.map(m => msaAgg[m].totalUPB));
       let mapped = 0;
 
       msaCodes.forEach(msa => {
@@ -653,36 +719,43 @@
         if (!centroid) return;
 
         mapped++;
-        const data = msaAgg[msa];
-        const pct = ((data.count / totalLoans) * 100).toFixed(2);
-        const radius = Math.max(8, Math.min(50, (data.count / maxCount) * 50));
+        const d = msaAgg[msa];
+        const pct = ((d.count / totalLoans) * 100).toFixed(2);
+        const radius = Math.max(8, Math.min(50, (d.count / maxCount) * 50));
 
         const circle = L.circleMarker([centroid[0], centroid[1]], {
           radius: radius,
-          fillColor: getHeatColor(data.count / maxCount),
+          fillColor: getHeatColor(d.count / maxCount),
           color: '#fff',
           weight: 1,
           fillOpacity: 0.75
         });
 
-        const upbStr = data.totalUPB > 0
-          ? `$${(data.totalUPB / 1e6).toFixed(1)}M`
-          : 'N/A';
+        const origStr = d.totalOrigUPB > 0 ? `$${(d.totalOrigUPB / 1e6).toFixed(1)}M` : 'N/A';
+        const curStr = d.totalCurUPB > 0 ? `$${(d.totalCurUPB / 1e6).toFixed(1)}M` : 'N/A';
+        const avgFico = avg(d.ficos);
+        const avgLTV = avg(d.ltvs);
+        const avgDTI = avg(d.dtis);
 
         circle.bindPopup(`
           <div class="msa-popup">
             <b>${centroid[2] || 'MSA ' + msa}</b><br>
             <table>
               <tr><td class="label">MSA Code:</td><td>${msa}</td></tr>
-              <tr><td class="label">Loans:</td><td>${data.count.toLocaleString()}</td></tr>
+              <tr><td class="label">Loans:</td><td>${d.count.toLocaleString()}</td></tr>
               <tr><td class="label">% of Pool:</td><td>${pct}%</td></tr>
-              <tr><td class="label">Total UPB:</td><td>${upbStr}</td></tr>
-              <tr><td class="label">Zip Codes:</td><td>${data.zips.size}</td></tr>
+              <tr><td class="label">Orig UPB:</td><td>${origStr}</td></tr>
+              ${d.totalCurUPB > 0 ? `<tr><td class="label">Cur UPB:</td><td>${curStr}</td></tr>` : ''}
+              ${avgFico > 0 ? `<tr><td class="label">Avg FICO:</td><td>${avgFico.toFixed(0)}</td></tr>` : ''}
+              ${avgLTV > 0 ? `<tr><td class="label">Avg LTV:</td><td>${avgLTV.toFixed(1)}%</td></tr>` : ''}
+              ${avgDTI > 0 ? `<tr><td class="label">Avg DTI:</td><td>${avgDTI.toFixed(1)}%</td></tr>` : ''}
+              <tr><td class="label">3-Digit Zips:</td><td>${d.zips.size}</td></tr>
+              ${d.states.size > 0 ? `<tr><td class="label">States:</td><td>${[...d.states].join(', ')}</td></tr>` : ''}
             </table>
           </div>
         `);
 
-        circle.bindTooltip(`${centroid[2] || msa}: ${data.count.toLocaleString()} loans (${pct}%)`, {
+        circle.bindTooltip(`${centroid[2] || msa}: ${d.count.toLocaleString()} loans (${pct}%)`, {
           sticky: true
         });
 
@@ -691,9 +764,9 @@
 
       const unmapped = msaCodes.length - mapped;
       document.getElementById('upload-status').textContent =
-        `Loaded: ${totalLoans.toLocaleString()} loans across ${msaCodes.length} MSAs` +
-        (totalUPB > 0 ? ` | Total UPB: $${(totalUPB / 1e9).toFixed(2)}B` : '') +
-        (unmapped > 0 ? ` | ${unmapped} MSAs not mapped` : '');
+        `${totalLoans.toLocaleString()} loans | ${msaCodes.length} MSAs` +
+        (totalUPB > 0 ? ` | $${(totalUPB / 1e9).toFixed(2)}B UPB` : '') +
+        (unmapped > 0 ? ` | ${unmapped} unmapped` : '');
       document.getElementById('clear-btn').style.display = 'inline-block';
     }
 

@@ -714,12 +714,18 @@
     });
 
     // --- Hide loading indicator ---
-    darkBase.on('load', () => {
+    // Hide as soon as any tiles load, or after 2s max
+    darkBase.on('tileload', function onFirst() {
       document.getElementById('loading').style.display = 'none';
+      darkBase.off('tileload', onFirst);
+    });
+    darkBase.on('tileerror', function onErr() {
+      document.getElementById('loading').style.display = 'none';
+      darkBase.off('tileerror', onErr);
     });
     setTimeout(() => {
       document.getElementById('loading').style.display = 'none';
-    }, 3000);
+    }, 2000);
   </script>
 </body>
 </html>

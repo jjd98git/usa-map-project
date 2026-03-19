@@ -466,46 +466,50 @@
         layerControl.addOverlay(statesLayer, 'State Borders');
       });
 
-    // --- MSA Boundaries (Census Bureau TIGERweb) ---
-    const msaLayer = L.esri.dynamicMapLayer({
-      url: 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer',
-      layers: [93],
-      opacity: 0.6,
-      transparent: true,
-      useCors: true
-    });
-
-    // --- FEMA National Flood Hazard Layer ---
-    const femaFloodLayer = L.esri.dynamicMapLayer({
-      url: 'https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer',
-      layers: [28],
-      opacity: 0.5,
-      transparent: true,
-      useCors: false  // FEMA doesn't support CORS — use JSONP fallback
-    });
-
-    // Log FEMA errors for debugging
-    femaFloodLayer.on('requesterror', function(e) {
-      console.warn('FEMA layer request error:', e);
-    });
-
     // --- Loan data layer (populated by file upload) ---
     let loanLayer = L.layerGroup().addTo(map);
 
-    // --- Layer control ---
+    // --- Layer control (created first so it always renders) ---
     const baseLayers = {
       'Dark': darkBase, 'Light': lightBase,
       'Street': streetBase, 'Satellite': satelliteBase
     };
-    const overlays = {
-      'MSA Boundaries': msaLayer,
-      'FEMA Flood Zones (zoom in)': femaFloodLayer,
+    const layerControl = L.control.layers(baseLayers, {
       'Loan Concentrations': loanLayer
-    };
-    const layerControl = L.control.layers(baseLayers, overlays, {
+    }, {
       collapsed: false,
       position: 'topright'
     }).addTo(map);
+
+    // --- MSA Boundaries (Census Bureau TIGERweb) ---
+    try {
+      const msaLayer = L.esri.dynamicMapLayer({
+        url: 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer',
+        layers: [93],
+        opacity: 0.6,
+        transparent: true,
+        useCors: true
+      });
+      layerControl.addOverlay(msaLayer, 'MSA Boundaries');
+      msaLayer.on('requesterror', function(e) {
+        console.warn('MSA layer error:', e);
+      });
+    } catch(e) { console.warn('MSA layer failed to load:', e); }
+
+    // --- FEMA National Flood Hazard Layer ---
+    try {
+      const femaFloodLayer = L.esri.dynamicMapLayer({
+        url: 'https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer',
+        layers: [28],
+        opacity: 0.5,
+        transparent: true,
+        useCors: false
+      });
+      layerControl.addOverlay(femaFloodLayer, 'FEMA Flood Zones (zoom in)');
+      femaFloodLayer.on('requesterror', function(e) {
+        console.warn('FEMA layer error:', e);
+      });
+    } catch(e) { console.warn('FEMA layer failed to load:', e); }
 
     // --- File upload control ---
     const uploadControl = L.control({ position: 'topleft' });

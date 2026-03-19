@@ -462,6 +462,8 @@
             }
           }
         }).addTo(map);
+        // Add to layer control now that it's loaded
+        layerControl.addOverlay(statesLayer, 'State Borders');
       });
 
     // --- MSA Boundaries (Census Bureau TIGERweb) ---
@@ -496,13 +498,12 @@
       'Street': streetBase, 'Satellite': satelliteBase
     };
     const overlays = {
-      'State Borders': statesLayer,
       'MSA Boundaries': msaLayer,
       'FEMA Flood Zones (zoom in)': femaFloodLayer,
       'Loan Concentrations': loanLayer
     };
     const layerControl = L.control.layers(baseLayers, overlays, {
-      collapsed: true,
+      collapsed: false,
       position: 'topright'
     }).addTo(map);
 

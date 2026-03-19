@@ -238,24 +238,21 @@
       });
 
     // --- MSA Boundaries (Census Bureau TIGERweb ArcGIS service) ---
-    // Layer 24 = Metropolitan Statistical Areas in TIGERweb
+    // Layer 93 = Metropolitan Statistical Areas in TIGERweb
     const msaLayer = L.esri.dynamicMapLayer({
       url: 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer',
-      layers: [24],
-      opacity: 0.5,
+      layers: [93],
+      opacity: 0.6,
       transparent: true,
-      useCors: true,
-      style: function () {
-        return { color: '#00e5ff', weight: 2, fillOpacity: 0.08 };
-      }
+      useCors: true
     });
 
     // --- FEMA National Flood Hazard Layer (NFHL) ---
-    // Full NFHL from FEMA's public ArcGIS MapServer
+    // Layer 28 = Flood Hazard Zones (corrected URL path: /arcgis/ not /gis/nfhl/)
     const femaFloodLayer = L.esri.dynamicMapLayer({
-      url: 'https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHL/MapServer',
-      layers: [28],  // Layer 28 = Flood Hazard Zones
-      opacity: 0.45,
+      url: 'https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer',
+      layers: [28],
+      opacity: 0.5,
       transparent: true,
       useCors: true
     });

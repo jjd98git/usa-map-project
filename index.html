@@ -112,7 +112,7 @@
     }
     .clear-btn:hover { background: #444; }
 
-    /* Loading indicator */
+    /* Loading indicator — auto-hides via CSS */
     #loading {
       position: fixed;
       top: 50%;
@@ -124,6 +124,11 @@
       border: 1px solid #e94560;
       z-index: 2000;
       font-size: 1.1rem;
+      animation: fadeout 0.5s ease 1.5s forwards;
+      pointer-events: none;
+    }
+    @keyframes fadeout {
+      to { opacity: 0; visibility: hidden; }
     }
 
     /* MSA popup table */

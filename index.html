@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive USA Map — MSAs &amp; FEMA Flood Zones</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Esri Leaflet (for ArcGIS service layers) -->
+  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+    }
+    #map { width: 100%; height: 100vh; }
+
+    /* Layer control styling */
+    .leaflet-control-layers {
+      background: rgba(26, 26, 46, 0.95) !important;
+      border: 1px solid #0f3460 !important;
+      border-radius: 8px !important;
+      color: #e0e0ff !important;
+      padding: 8px 12px !important;
+    }
+    .leaflet-control-layers-selector { margin-right: 6px; }
+    .leaflet-control-layers label { color: #e0e0ff; margin-bottom: 4px; display: block; }
+    .leaflet-control-layers-separator {
+      border-top-color: #0f3460 !important;
+    }
+
+    /* Info panel */
+    .info-panel {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(22, 33, 62, 0.95);
+      padding: 12px 24px;
+      border-radius: 10px;
+      border: 1px solid #0f3460;
+      z-index: 1000;
+      text-align: center;
+      max-width: 90%;
+      display: none;
+    }
+    .info-panel h3 { color: #e94560; margin-bottom: 4px; }
+    .info-panel p { color: #ccc; font-size: 0.9rem; }
+
+    /* Legend */
+    .legend {
+      background: rgba(26, 26, 46, 0.95) !important;
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 10px 14px;
+      line-height: 1.8;
+      color: #e0e0ff;
+      font-size: 0.85rem;
+    }
+    .legend h4 { margin-bottom: 6px; color: #e94560; }
+    .legend i {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      margin-right: 6px;
+      vertical-align: middle;
+      border-radius: 2px;
+    }
+
+    /* Loading indicator */
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(22, 33, 62, 0.95);
+      padding: 20px 30px;
+      border-radius: 10px;
+      border: 1px solid #e94560;
+      z-index: 2000;
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="info-panel" id="info-panel">
+    <h3 id="info-name"></h3>
+    <p id="info-detail"></p>
+  </div>
+  <div id="loading">Loading map layers...</div>
+
+  <script>
+    // --- State data ---
+    const stateData = {
+      "01": { name: "Alabama", abbr: "AL", capital: "Montgomery", pop: "5.1M" },
+      "02": { name: "Alaska", abbr: "AK", capital: "Juneau", pop: "733K" },
+      "04": { name: "Arizona", abbr: "AZ", capital: "Phoenix", pop: "7.4M" },
+      "05": { name: "Arkansas", abbr: "AR", capital: "Little Rock", pop: "3.0M" },
+      "06": { name: "California", abbr: "CA", capital: "Sacramento", pop: "39.0M" },
+      "08": { name: "Colorado", abbr: "CO", capital: "Denver", pop: "5.9M" },
+      "09": { name: "Connecticut", abbr: "CT", capital: "Hartford", pop: "3.6M" },
+      "10": { name: "Delaware", abbr: "DE", capital: "Dover", pop: "1.0M" },
+      "12": { name: "Florida", abbr: "FL", capital: "Tallahassee", pop: "22.2M" },
+      "13": { name: "Georgia", abbr: "GA", capital: "Atlanta", pop: "11.0M" },
+      "15": { name: "Hawaii", abbr: "HI", capital: "Honolulu", pop: "1.4M" },
+      "16": { name: "Idaho", abbr: "ID", capital: "Boise", pop: "1.9M" },
+      "17": { name: "Illinois", abbr: "IL", capital: "Springfield", pop: "12.5M" },
+      "18": { name: "Indiana", abbr: "IN", capital: "Indianapolis", pop: "6.8M" },
+      "19": { name: "Iowa", abbr: "IA", capital: "Des Moines", pop: "3.2M" },
+      "20": { name: "Kansas", abbr: "KS", capital: "Topeka", pop: "2.9M" },
+      "21": { name: "Kentucky", abbr: "KY", capital: "Frankfort", pop: "4.5M" },
+      "22": { name: "Louisiana", abbr: "LA", capital: "Baton Rouge", pop: "4.6M" },
+      "23": { name: "Maine", abbr: "ME", capital: "Augusta", pop: "1.4M" },
+      "24": { name: "Maryland", abbr: "MD", capital: "Annapolis", pop: "6.2M" },
+      "25": { name: "Massachusetts", abbr: "MA", capital: "Boston", pop: "7.0M" },
+      "26": { name: "Michigan", abbr: "MI", capital: "Lansing", pop: "10.0M" },
+      "27": { name: "Minnesota", abbr: "MN", capital: "St. Paul", pop: "5.7M" },
+      "28": { name: "Mississippi", abbr: "MS", capital: "Jackson", pop: "2.9M" },
+      "29": { name: "Missouri", abbr: "MO", capital: "Jefferson City", pop: "6.2M" },
+      "30": { name: "Montana", abbr: "MT", capital: "Helena", pop: "1.1M" },
+      "31": { name: "Nebraska", abbr: "NE", capital: "Lincoln", pop: "2.0M" },
+      "32": { name: "Nevada", abbr: "NV", capital: "Carson City", pop: "3.2M" },
+      "33": { name: "New Hampshire", abbr: "NH", capital: "Concord", pop: "1.4M" },
+      "34": { name: "New Jersey", abbr: "NJ", capital: "Trenton", pop: "9.3M" },
+      "35": { name: "New Mexico", abbr: "NM", capital: "Santa Fe", pop: "2.1M" },
+      "36": { name: "New York", abbr: "NY", capital: "Albany", pop: "19.5M" },
+      "37": { name: "North Carolina", abbr: "NC", capital: "Raleigh", pop: "10.7M" },
+      "38": { name: "North Dakota", abbr: "ND", capital: "Bismarck", pop: "780K" },
+      "39": { name: "Ohio", abbr: "OH", capital: "Columbus", pop: "11.8M" },
+      "40": { name: "Oklahoma", abbr: "OK", capital: "Oklahoma City", pop: "4.0M" },
+      "41": { name: "Oregon", abbr: "OR", capital: "Salem", pop: "4.2M" },
+      "42": { name: "Pennsylvania", abbr: "PA", capital: "Harrisburg", pop: "13.0M" },
+      "44": { name: "Rhode Island", abbr: "RI", capital: "Providence", pop: "1.1M" },
+      "45": { name: "South Carolina", abbr: "SC", capital: "Columbia", pop: "5.3M" },
+      "46": { name: "South Dakota", abbr: "SD", capital: "Pierre", pop: "910K" },
+      "47": { name: "Tennessee", abbr: "TN", capital: "Nashville", pop: "7.1M" },
+      "48": { name: "Texas", abbr: "TX", capital: "Austin", pop: "30.5M" },
+      "49": { name: "Utah", abbr: "UT", capital: "Salt Lake City", pop: "3.4M" },
+      "50": { name: "Vermont", abbr: "VT", capital: "Montpelier", pop: "647K" },
+      "51": { name: "Virginia", abbr: "VA", capital: "Richmond", pop: "8.6M" },
+      "53": { name: "Washington", abbr: "WA", capital: "Olympia", pop: "7.8M" },
+      "54": { name: "West Virginia", abbr: "WV", capital: "Charleston", pop: "1.8M" },
+      "55": { name: "Wisconsin", abbr: "WI", capital: "Madison", pop: "5.9M" },
+      "56": { name: "Wyoming", abbr: "WY", capital: "Cheyenne", pop: "577K" },
+      "11": { name: "District of Columbia", abbr: "DC", capital: "N/A", pop: "672K" }
+    };
+
+    // --- Initialize map ---
+    const map = L.map('map', {
+      center: [39.5, -98.5],
+      zoom: 5,
+      minZoom: 3,
+      maxZoom: 18,
+      zoomControl: true
+    });
+
+    // --- Base layers ---
+    const darkBase = L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+      }
+    );
+
+    const lightBase = L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+      }
+    );
+
+    const satelliteBase = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; Esri',
+        maxZoom: 19
+      }
+    );
+
+    darkBase.addTo(map);
+
+    // --- State boundaries (GeoJSON) ---
+    let statesLayer;
+    fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
+      .then(r => r.json())
+      .then(us => {
+        // Convert TopoJSON to GeoJSON
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js';
+        script.onload = () => {
+          const geojson = topojson.feature(us, us.objects.states);
+          statesLayer = L.geoJSON(geojson, {
+            style: {
+              fillColor: 'transparent',
+              fillOpacity: 0,
+              color: '#4a6fa5',
+              weight: 1.5,
+              opacity: 0.8
+            },
+            onEachFeature: (feature, layer) => {
+              const info = stateData[feature.id];
+              if (info) {
+                layer.on({
+                  mouseover: e => {
+                    e.target.setStyle({ color: '#e94560', weight: 2.5, fillColor: '#e94560', fillOpacity: 0.1 });
+                  },
+                  mouseout: e => {
+                    statesLayer.resetStyle(e.target);
+                  },
+                  click: e => {
+                    const panel = document.getElementById('info-panel');
+                    document.getElementById('info-name').textContent = `${info.name} (${info.abbr})`;
+                    document.getElementById('info-detail').textContent =
+                      `Capital: ${info.capital} | Population: ~${info.pop}`;
+                    panel.style.display = 'block';
+                    map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
+                  }
+                });
+                layer.bindTooltip(info.name, {
+                  sticky: true,
+                  className: 'state-tooltip'
+                });
+              }
+            }
+          }).addTo(map);
+        };
+        document.head.appendChild(script);
+      });
+
+    // --- MSA Boundaries (Census Bureau TIGERweb ArcGIS service) ---
+    // Layer 24 = Metropolitan Statistical Areas in TIGERweb
+    const msaLayer = L.esri.dynamicMapLayer({
+      url: 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer',
+      layers: [24],
+      opacity: 0.5,
+      transparent: true,
+      useCors: true,
+      style: function () {
+        return { color: '#00e5ff', weight: 2, fillOpacity: 0.08 };
+      }
+    });
+
+    // --- FEMA National Flood Hazard Layer (NFHL) ---
+    // Full NFHL from FEMA's public ArcGIS MapServer
+    const femaFloodLayer = L.esri.dynamicMapLayer({
+      url: 'https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHL/MapServer',
+      layers: [28],  // Layer 28 = Flood Hazard Zones
+      opacity: 0.45,
+      transparent: true,
+      useCors: true
+    });
+
+    // --- Layer control ---
+    const baseLayers = {
+      'Dark': darkBase,
+      'Light': lightBase,
+      'Satellite': satelliteBase
+    };
+
+    const overlays = {
+      'MSA Boundaries': msaLayer,
+      'FEMA Flood Zones': femaFloodLayer
+    };
+
+    L.control.layers(baseLayers, overlays, {
+      collapsed: false,
+      position: 'topright'
+    }).addTo(map);
+
+    // --- Legend ---
+    const legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function () {
+      const div = L.DomUtil.create('div', 'legend');
+      div.innerHTML = `
+        <h4>Legend</h4>
+        <div><i style="background:#4a6fa5;opacity:0.8"></i> State Borders</div>
+        <div><i style="background:#00e5ff;opacity:0.5"></i> MSA Boundaries</div>
+        <div><i style="background:#4264fb;opacity:0.5"></i> FEMA Flood Zones</div>
+        <div style="margin-top:6px;font-size:0.75rem;color:#999;">
+          Toggle layers in the top-right panel.<br>
+          Zoom in to see flood zone detail.
+        </div>
+      `;
+      return div;
+    };
+    legend.addTo(map);
+
+    // --- Close info panel on map click ---
+    map.on('click', () => {
+      document.getElementById('info-panel').style.display = 'none';
+    });
+
+    // --- Hide loading indicator once base tiles load ---
+    darkBase.on('load', () => {
+      document.getElementById('loading').style.display = 'none';
+    });
+    // Fallback: hide after 3 seconds regardless
+    setTimeout(() => {
+      document.getElementById('loading').style.display = 'none';
+    }, 3000);
+  </script>
+</body>
+</html>

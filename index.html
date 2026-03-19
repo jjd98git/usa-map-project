@@ -886,6 +886,18 @@
       // Add zip layer to map if not already
       if (!map.hasLayer(zipLayer)) zipLayer.addTo(map);
 
+      // Scale zip dots on zoom
+      function scaleZipDots() {
+        const zoom = map.getZoom();
+        const scale = Math.pow(1.3, zoom - 5); // grows ~30% per zoom level, baseline at zoom 5
+        zipLayer.eachLayer(function(layer) {
+          if (layer._baseRadius === undefined) layer._baseRadius = layer.getRadius();
+          layer.setRadius(layer._baseRadius * scale);
+        });
+      }
+      map.off('zoomend', scaleZipDots); // remove old listener if re-uploading
+      map.on('zoomend', scaleZipDots);
+
       const unmapped = msaCodes.length - mapped;
       const avgPoolRW = totalRWA / totalUPB;
       document.getElementById('upload-status').innerHTML =

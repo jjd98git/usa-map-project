@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interactive USA Map — MSAs &amp; FEMA Flood Zones</title>
+  <title>Interactive USA Map — MSAs, FEMA Flood Zones &amp; Loan Data</title>
 
   <!-- Leaflet (bundled locally) -->
   <link rel="stylesheet" href="lib/leaflet.css" />
@@ -34,9 +34,7 @@
     }
     .leaflet-control-layers-selector { margin-right: 6px; }
     .leaflet-control-layers label { color: #e0e0ff; margin-bottom: 4px; display: block; }
-    .leaflet-control-layers-separator {
-      border-top-color: #0f3460 !important;
-    }
+    .leaflet-control-layers-separator { border-top-color: #0f3460 !important; }
 
     /* Info panel */
     .info-panel {
@@ -54,7 +52,7 @@
       display: none;
     }
     .info-panel h3 { color: #e94560; margin-bottom: 4px; }
-    .info-panel p { color: #ccc; font-size: 0.9rem; }
+    .info-panel p { color: #ccc; font-size: 0.9rem; line-height: 1.5; }
 
     /* Legend */
     .legend {
@@ -76,6 +74,44 @@
       border-radius: 2px;
     }
 
+    /* Upload control */
+    .upload-control {
+      background: rgba(26, 26, 46, 0.95);
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #e0e0ff;
+      font-size: 0.85rem;
+      max-width: 220px;
+    }
+    .upload-control h4 { margin-bottom: 8px; color: #e94560; }
+    .upload-control input[type="file"] { display: none; }
+    .upload-btn {
+      display: inline-block;
+      background: #e94560;
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      border: none;
+      margin-bottom: 6px;
+    }
+    .upload-btn:hover { background: #c73652; }
+    .upload-status { color: #aab; font-size: 0.75rem; margin-top: 4px; }
+    .clear-btn {
+      display: none;
+      background: #333;
+      color: #ccc;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      border: 1px solid #555;
+      margin-top: 4px;
+    }
+    .clear-btn:hover { background: #444; }
+
     /* Loading indicator */
     #loading {
       position: fixed;
@@ -89,6 +125,11 @@
       z-index: 2000;
       font-size: 1.1rem;
     }
+
+    /* MSA popup table */
+    .msa-popup { font-size: 0.85rem; }
+    .msa-popup td { padding: 2px 6px; }
+    .msa-popup .label { color: #666; }
   </style>
 </head>
 <body>
@@ -100,6 +141,10 @@
   <div id="loading">Loading map layers...</div>
 
   <script>
+    // --- MSA code to name/lat/lng lookup (top ~400 MSAs) ---
+    // We'll dynamically query Census for MSA geometries, but we need centroid coords
+    // for circle markers. We'll build this from the loan data + a geocoding approach.
+
     // --- State data ---
     const stateData = {
       "01": { name: "Alabama", abbr: "AL", capital: "Montgomery", pop: "5.1M" },
@@ -155,6 +200,199 @@
       "11": { name: "District of Columbia", abbr: "DC", capital: "N/A", pop: "672K" }
     };
 
+    // --- MSA centroids (CBSA code -> [lat, lng, name]) for the major MSAs ---
+    const msaCentroids = {
+      "12060": [33.52, -86.80, "Atlanta-Sandy Springs-Alpharetta"],
+      "12420": [30.33, -81.66, "Austin-Round Rock-Georgetown"],
+      "12580": [33.75, -84.39, "Baltimore-Columbia-Towson"],
+      "13820": [33.45, -86.80, "Birmingham-Hoover"],
+      "14460": [42.36, -71.06, "Boston-Cambridge-Newton"],
+      "15380": [26.14, -80.14, "Buffalo-Cheektowaga"],
+      "16740": [35.23, -80.84, "Charlotte-Concord-Gastonia"],
+      "16980": [41.88, -87.63, "Chicago-Naperville-Elgin"],
+      "17140": [39.10, -84.51, "Cincinnati"],
+      "17460": [41.50, -81.69, "Cleveland-Elyria"],
+      "18140": [39.96, -83.00, "Columbus"],
+      "19100": [32.78, -96.80, "Dallas-Fort Worth-Arlington"],
+      "19740": [39.74, -104.99, "Denver-Aurora-Lakewood"],
+      "19820": [42.33, -83.05, "Detroit-Warren-Dearborn"],
+      "21340": [36.85, -75.98, "El Paso"],
+      "24340": [42.96, -85.66, "Grand Rapids-Kentwood"],
+      "25540": [36.07, -79.79, "Hartford-East Hartford-Middletown"],
+      "26420": [29.76, -95.37, "Houston-The Woodlands-Sugar Land"],
+      "26900": [39.77, -86.16, "Indianapolis-Carmel-Anderson"],
+      "27260": [30.33, -81.66, "Jacksonville"],
+      "28140": [39.10, -94.58, "Kansas City"],
+      "29820": [36.17, -115.14, "Las Vegas-Henderson-Paradise"],
+      "30780": [34.05, -118.24, "Los Angeles-Long Beach-Anaheim"],
+      "31080": [35.15, -90.05, "Memphis"],
+      "32820": [25.76, -80.19, "Miami-Fort Lauderdale-Pompano Beach"],
+      "33100": [43.04, -87.91, "Milwaukee-Waukesha"],
+      "33460": [44.98, -93.27, "Minneapolis-St. Paul-Bloomington"],
+      "34980": [36.17, -86.78, "Nashville-Davidson-Murfreesboro-Franklin"],
+      "35380": [29.95, -90.07, "New Orleans-Metairie"],
+      "35620": [40.71, -74.01, "New York-Newark-Jersey City"],
+      "36420": [35.47, -97.52, "Oklahoma City"],
+      "36740": [28.54, -81.38, "Orlando-Kissimmee-Sanford"],
+      "37980": [39.95, -75.17, "Philadelphia-Camden-Wilmington"],
+      "38060": [33.45, -112.07, "Phoenix-Mesa-Chandler"],
+      "38300": [40.44, -80.00, "Pittsburgh"],
+      "38900": [45.51, -122.68, "Portland-Vancouver-Hillsboro"],
+      "39580": [35.78, -78.64, "Raleigh-Cary"],
+      "40060": [37.54, -77.44, "Richmond"],
+      "40140": [43.16, -77.62, "Rochester"],
+      "40900": [38.58, -121.49, "Sacramento-Roseville-Folsom"],
+      "41180": [38.63, -90.20, "St. Louis"],
+      "41620": [40.76, -111.89, "Salt Lake City"],
+      "41700": [29.42, -98.49, "San Antonio-New Braunfels"],
+      "41740": [32.72, -117.16, "San Diego-Chula Vista-Carlsbad"],
+      "41860": [37.77, -122.42, "San Francisco-Oakland-Berkeley"],
+      "41940": [37.34, -121.89, "San Jose-Sunnyvale-Santa Clara"],
+      "42660": [47.61, -122.33, "Seattle-Tacoma-Bellevue"],
+      "44700": [38.35, -81.63, "Stockton"],
+      "45300": [27.95, -82.46, "Tampa-St. Petersburg-Clearwater"],
+      "46060": [36.15, -95.99, "Tucson"],
+      "47260": [38.89, -77.04, "Washington-Arlington-Alexandria"],
+      "47900": [47.66, -117.43, "Washington-Arlington-Alexandria"],
+      "10420": [30.27, -97.74, "Akron"],
+      "10580": [33.45, -82.00, "Albany-Schenectady-Troy"],
+      "10740": [35.08, -106.65, "Albuquerque"],
+      "10900": [40.60, -75.49, "Allentown-Bethlehem-Easton"],
+      "11100": [36.85, -76.29, "Amarillo"],
+      "11260": [42.10, -72.59, "Anchorage"],
+      "11460": [41.16, -73.20, "Ann Arbor"],
+      "12020": [34.73, -92.33, "Athens-Clarke County"],
+      "12260": [33.75, -84.39, "Augusta-Richmond County"],
+      "12940": [30.45, -91.19, "Baton Rouge"],
+      "13140": [44.48, -73.21, "Beaumont-Port Arthur"],
+      "14260": [43.01, -78.79, "Boise City"],
+      "15180": [26.12, -80.14, "Brownsville-Harlingen"],
+      "15940": [43.61, -116.21, "Canton-Massillon"],
+      "16300": [34.00, -81.03, "Cedar Rapids"],
+      "16620": [34.85, -82.39, "Charleston-North Charleston"],
+      "17020": [38.35, -81.63, "Chattanooga"],
+      "17820": [41.66, -91.53, "Colorado Springs"],
+      "17900": [34.00, -81.03, "Columbia"],
+      "19380": [41.76, -72.68, "Dayton-Kettering"],
+      "19500": [42.10, -76.08, "Decatur"],
+      "20100": [42.49, -71.15, "Dover"],
+      "20500": [44.05, -121.31, "Durham-Chapel Hill"],
+      "21060": [36.85, -75.98, "Elizabethtown-Fort Knox"],
+      "21500": [36.07, -79.79, "Erie"],
+      "22180": [33.96, -83.38, "Fayetteville"],
+      "22220": [36.06, -94.16, "Fayetteville-Springdale-Rogers"],
+      "23420": [28.01, -81.95, "Fresno"],
+      "23540": [29.30, -94.80, "Gainesville"],
+      "24660": [36.07, -79.79, "Greensboro-High Point"],
+      "24860": [34.85, -82.39, "Greenville-Anderson"],
+      "25060": [40.81, -96.70, "Harrisburg-Carlisle"],
+      "25180": [36.31, -82.35, "Hagerstown-Martinsburg"],
+      "25420": [21.31, -157.86, "Honolulu"],
+      "25860": [30.69, -88.04, "Huntsville"],
+      "26620": [33.51, -86.80, "Huntsville"],
+      "27140": [39.77, -86.16, "Jackson"],
+      "27340": [30.33, -81.66, "Kalamazoo-Portage"],
+      "27500": [46.60, -120.51, "Kennewick-Richland"],
+      "27740": [35.96, -83.92, "Knoxville"],
+      "27780": [42.27, -83.74, "Lafayette"],
+      "27900": [42.86, -78.88, "Lakeland-Winter Haven"],
+      "28420": [40.81, -96.70, "Lansing-East Lansing"],
+      "28660": [39.05, -84.66, "Lexington-Fayette"],
+      "28940": [33.75, -84.39, "Lincoln"],
+      "29180": [34.27, -77.95, "Little Rock-North Little Rock-Conway"],
+      "29540": [33.75, -84.39, "Louisville/Jefferson County"],
+      "29620": [33.45, -112.07, "Lubbock"],
+      "30460": [43.04, -87.91, "Macon-Bibb County"],
+      "31140": [32.30, -90.18, "Madison"],
+      "31540": [35.05, -85.31, "McAllen-Edinburg-Mission"],
+      "32580": [26.53, -80.07, "Midland"],
+      "33340": [32.37, -86.30, "Milwaukee-Waukesha"],
+      "33660": [30.69, -88.04, "Mobile"],
+      "33860": [36.06, -86.67, "Montgomery"],
+      "34620": [35.94, -86.87, "Muncie"],
+      "34820": [37.69, -97.34, "Myrtle Beach-Conway-North Myrtle Beach"],
+      "35300": [40.27, -76.88, "New Haven-Milford"],
+      "35840": [29.95, -90.07, "North Port-Sarasota-Bradenton"],
+      "36100": [41.26, -95.94, "Ocala"],
+      "36260": [35.46, -97.52, "Ogden-Clearfield"],
+      "36540": [28.54, -81.38, "Omaha-Council Bluffs"],
+      "37100": [40.44, -80.00, "Oxnard-Thousand Oaks-Ventura"],
+      "37340": [30.44, -84.28, "Palm Bay-Melbourne-Titusville"],
+      "37460": [26.72, -80.05, "Panama City"],
+      "37860": [30.21, -85.85, "Pensacola-Ferry Pass-Brent"],
+      "38340": [26.64, -81.87, "Peoria"],
+      "38860": [45.52, -122.68, "Portland-South Portland"],
+      "39100": [41.82, -71.41, "Poughkeepsie-Newburgh-Middletown"],
+      "39300": [41.82, -71.41, "Providence-Warwick"],
+      "39340": [40.38, -111.83, "Provo-Orem"],
+      "39740": [37.27, -79.94, "Reading"],
+      "40220": [37.27, -79.94, "Roanoke"],
+      "40380": [43.16, -77.62, "Rochester"],
+      "40420": [38.58, -121.49, "Rockford"],
+      "41100": [38.63, -90.20, "St. George"],
+      "41420": [41.70, -86.25, "Salem"],
+      "41500": [40.67, -73.94, "Salinas"],
+      "41540": [33.45, -112.07, "Salisbury"],
+      "42020": [37.34, -121.89, "San Luis Obispo-Paso Robles"],
+      "42100": [34.42, -119.70, "Santa Cruz-Watsonville"],
+      "42140": [34.42, -119.70, "Santa Maria-Santa Barbara"],
+      "42200": [34.42, -119.70, "Santa Rosa-Petaluma"],
+      "42540": [32.44, -80.67, "Savannah"],
+      "42340": [41.51, -72.82, "Scranton-Wilkes-Barre"],
+      "43300": [42.66, -73.80, "Sherman-Denison"],
+      "43580": [32.46, -93.70, "Shreveport-Bossier City"],
+      "43780": [43.55, -96.73, "Sioux Falls"],
+      "43900": [34.95, -81.93, "Spartanburg"],
+      "44060": [47.66, -117.43, "Spokane-Spokane Valley"],
+      "44100": [39.80, -89.65, "Springfield"],
+      "44140": [37.22, -93.29, "Springfield"],
+      "44180": [38.75, -89.99, "Springfield"],
+      "44220": [37.96, -87.56, "Staunton"],
+      "44420": [37.96, -87.56, "Stockton"],
+      "44660": [43.05, -76.15, "Syracuse"],
+      "45060": [43.66, -116.35, "Tallahassee"],
+      "45220": [30.44, -84.28, "Tallahassee"],
+      "45780": [32.22, -110.97, "Toledo"],
+      "45820": [39.11, -121.63, "Topeka"],
+      "46020": [36.15, -95.99, "Trenton-Princeton"],
+      "46140": [32.22, -110.97, "Tucson"],
+      "46220": [36.15, -95.99, "Tulsa"],
+      "46340": [32.45, -99.73, "Tyler"],
+      "46540": [39.16, -75.52, "Utica-Rome"],
+      "47020": [36.65, -78.90, "Victoria"],
+      "47220": [36.85, -76.29, "Virginia Beach-Norfolk-Newport News"],
+      "47380": [31.55, -97.15, "Waco"],
+      "47580": [38.53, -89.99, "Warner Robins"],
+      "47940": [42.33, -83.05, "Waterloo-Cedar Falls"],
+      "48140": [34.23, -77.91, "Wausau-Weston"],
+      "48260": [42.10, -80.08, "Wichita"],
+      "48300": [37.69, -97.34, "Wichita Falls"],
+      "48540": [34.23, -77.91, "Wilmington"],
+      "48620": [36.10, -80.26, "Winston-Salem"],
+      "48660": [41.24, -75.88, "Worcester"],
+      "48900": [41.24, -75.88, "Youngstown-Warren-Boardman"],
+      "49180": [42.12, -72.60, "York-Hanover"],
+      "49340": [40.06, -76.31, "York-Hanover"],
+      "49620": [40.06, -76.31, "Yuma"],
+      "10180": [41.08, -81.52, "Abilene"],
+      "14860": [25.76, -80.19, "Bridgeport-Stamford-Norwalk"],
+      "15764": [26.64, -81.87, "Cape Coral-Fort Myers"],
+      "16860": [32.78, -79.93, "Chattanooga"],
+      "19660": [39.74, -105.0, "Deltona-Daytona Beach-Ormond Beach"],
+      "23104": [36.85, -119.77, "Fresno"],
+      "26180": [33.45, -82.00, "Honolulu"],
+      "29460": [28.03, -80.59, "Lakeland-Winter Haven"],
+      "33124": [25.76, -80.19, "Miami-Miami Beach-Kendall"],
+      "35614": [40.71, -74.01, "New York-Jersey City-White Plains"],
+      "36084": [34.15, -118.14, "North Port-Sarasota-Bradenton"],
+      "37764": [45.51, -122.68, "Portland-Vancouver-Hillsboro"],
+      "39460": [41.82, -71.41, "Providence-Warwick"],
+      "40484": [33.45, -112.07, "Riverside-San Bernardino-Ontario"],
+      "41884": [37.77, -122.42, "San Francisco-Oakland-Hayward"],
+      "42044": [37.34, -121.89, "San Jose-Sunnyvale-Santa Clara"],
+      "47894": [38.89, -77.04, "Washington-Arlington-Alexandria"]
+    };
+
     // --- Initialize map ---
     const map = L.map('map', {
       center: [39.5, -98.5],
@@ -164,35 +402,27 @@
       zoomControl: true
     });
 
-    // --- Base layers (all from arcgisonline.com — single domain) ---
+    // --- Base layers (all from arcgisonline.com) ---
     const darkBase = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '&copy; Esri',
-        maxZoom: 16
+        attribution: '&copy; Esri', maxZoom: 16
       }
     );
-
     const lightBase = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '&copy; Esri',
-        maxZoom: 16
+        attribution: '&copy; Esri', maxZoom: 16
       }
     );
-
     const satelliteBase = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '&copy; Esri',
-        maxZoom: 19
+        attribution: '&copy; Esri', maxZoom: 19
       }
     );
-
     const streetBase = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '&copy; Esri',
-        maxZoom: 19
+        attribution: '&copy; Esri', maxZoom: 19
       }
     );
-
     darkBase.addTo(map);
 
     // --- State boundaries (local GeoJSON) ---
@@ -203,11 +433,8 @@
         const geojson = topojson.feature(us, us.objects.states);
         statesLayer = L.geoJSON(geojson, {
           style: {
-            fillColor: 'transparent',
-            fillOpacity: 0,
-            color: '#4a6fa5',
-            weight: 1.5,
-            opacity: 0.8
+            fillColor: 'transparent', fillOpacity: 0,
+            color: '#4a6fa5', weight: 1.5, opacity: 0.8
           },
           onEachFeature: (feature, layer) => {
             const info = stateData[feature.id];
@@ -216,9 +443,7 @@
                 mouseover: e => {
                   e.target.setStyle({ color: '#e94560', weight: 2.5, fillColor: '#e94560', fillOpacity: 0.1 });
                 },
-                mouseout: e => {
-                  statesLayer.resetStyle(e.target);
-                },
+                mouseout: e => { statesLayer.resetStyle(e.target); },
                 click: e => {
                   const panel = document.getElementById('info-panel');
                   document.getElementById('info-name').textContent = `${info.name} (${info.abbr})`;
@@ -228,17 +453,13 @@
                   map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
                 }
               });
-              layer.bindTooltip(info.name, {
-                sticky: true,
-                className: 'state-tooltip'
-              });
+              layer.bindTooltip(info.name, { sticky: true });
             }
           }
         }).addTo(map);
       });
 
-    // --- MSA Boundaries (Census Bureau TIGERweb ArcGIS service) ---
-    // Layer 93 = Metropolitan Statistical Areas in TIGERweb
+    // --- MSA Boundaries (Census Bureau TIGERweb) ---
     const msaLayer = L.esri.dynamicMapLayer({
       url: 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer',
       layers: [93],
@@ -247,33 +468,56 @@
       useCors: true
     });
 
-    // --- FEMA National Flood Hazard Layer (NFHL) ---
-    // Layer 28 = Flood Hazard Zones (corrected URL path: /arcgis/ not /gis/nfhl/)
+    // --- FEMA National Flood Hazard Layer ---
     const femaFloodLayer = L.esri.dynamicMapLayer({
       url: 'https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer',
       layers: [28],
       opacity: 0.5,
       transparent: true,
-      useCors: true
+      useCors: false  // FEMA doesn't support CORS — use JSONP fallback
     });
+
+    // Log FEMA errors for debugging
+    femaFloodLayer.on('requesterror', function(e) {
+      console.warn('FEMA layer request error:', e);
+    });
+
+    // --- Loan data layer (populated by file upload) ---
+    let loanLayer = L.layerGroup().addTo(map);
 
     // --- Layer control ---
     const baseLayers = {
-      'Dark': darkBase,
-      'Light': lightBase,
-      'Street': streetBase,
-      'Satellite': satelliteBase
+      'Dark': darkBase, 'Light': lightBase,
+      'Street': streetBase, 'Satellite': satelliteBase
     };
-
     const overlays = {
+      'State Borders': statesLayer,
       'MSA Boundaries': msaLayer,
-      'FEMA Flood Zones': femaFloodLayer
+      'FEMA Flood Zones (zoom in)': femaFloodLayer,
+      'Loan Concentrations': loanLayer
     };
-
-    L.control.layers(baseLayers, overlays, {
-      collapsed: false,
+    const layerControl = L.control.layers(baseLayers, overlays, {
+      collapsed: true,
       position: 'topright'
     }).addTo(map);
+
+    // --- File upload control ---
+    const uploadControl = L.control({ position: 'topleft' });
+    uploadControl.onAdd = function () {
+      const div = L.DomUtil.create('div', 'upload-control');
+      div.innerHTML = `
+        <h4>Loan Tape Upload</h4>
+        <label class="upload-btn" for="file-input">Choose File</label>
+        <input type="file" id="file-input" accept=".txt,.csv,.tsv,.pipe" />
+        <div class="upload-status" id="upload-status">
+          Supports Freddie Mac CRT pipe-delimited files, or CSV with MSA/zip + UPB columns
+        </div>
+        <button class="clear-btn" id="clear-btn" onclick="clearLoanData()">Clear Loan Data</button>
+      `;
+      L.DomEvent.disableClickPropagation(div);
+      return div;
+    };
+    uploadControl.addTo(map);
 
     // --- Legend ---
     const legend = L.control({ position: 'bottomright' });
@@ -284,25 +528,195 @@
         <div><i style="background:#4a6fa5;opacity:0.8"></i> State Borders</div>
         <div><i style="background:#00e5ff;opacity:0.5"></i> MSA Boundaries</div>
         <div><i style="background:#4264fb;opacity:0.5"></i> FEMA Flood Zones</div>
+        <div><i style="background:#e94560;opacity:0.7;border-radius:50%"></i> Loan Concentrations</div>
         <div style="margin-top:6px;font-size:0.75rem;color:#999;">
-          Toggle layers in the top-right panel.<br>
-          Zoom in to see flood zone detail.
+          Zoom in for flood zone detail.<br>
+          Upload a loan tape to see concentrations.
         </div>
       `;
       return div;
     };
     legend.addTo(map);
 
+    // --- Loan tape parsing ---
+    document.getElementById('file-input').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById('upload-status').textContent = 'Reading file...';
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const text = evt.target.result;
+        parseLoanTape(text, file.name);
+      };
+      reader.readAsText(file);
+    });
+
+    function parseLoanTape(text, filename) {
+      const lines = text.trim().split('\n');
+      if (lines.length < 2) {
+        document.getElementById('upload-status').textContent = 'Error: File appears empty';
+        return;
+      }
+
+      // Detect delimiter
+      const firstLine = lines[0];
+      let delimiter = '|';
+      if (firstLine.includes('\t') && !firstLine.includes('|')) delimiter = '\t';
+      else if (firstLine.includes(',') && !firstLine.includes('|')) delimiter = ',';
+
+      const headers = firstLine.split(delimiter).map(h => h.trim().toUpperCase().replace(/"/g, ''));
+
+      // Find MSA and UPB columns — try common Freddie Mac field names
+      let msaIdx = headers.findIndex(h =>
+        h === 'MSA' || h === 'METRO_STAT_AREA' || h === 'METROPOLITAN_STATISTICAL_AREA' ||
+        h === 'MSA_CODE' || h === 'CBSA' || h === 'MSA_CD'
+      );
+      let upbIdx = headers.findIndex(h =>
+        h === 'ORIG_UPB' || h === 'ORIGINAL_UPB' || h === 'CURRENT_UPB' || h === 'CUR_UPB' ||
+        h === 'UPB' || h === 'ORIG_AMT' || h === 'LOAN_AMOUNT' || h === 'ORIGINAL_LOAN_AMOUNT'
+      );
+      let zipIdx = headers.findIndex(h =>
+        h === 'ZIP' || h === 'POSTAL_CODE' || h === 'ZIP_CODE' || h === 'POSTAL_CD' || h === 'ZIP_3'
+      );
+
+      // If no header match, try positional for Freddie Mac standard layout
+      // Freddie Mac SFLLD: field 7 = MSA (0-indexed), field 11 = Original UPB, field 18 = Postal Code
+      if (msaIdx === -1 && headers.length > 18) {
+        // Check if this looks like headerless Freddie Mac data
+        const testRow = lines[1].split(delimiter);
+        if (testRow.length > 18) {
+          const possibleMSA = testRow[7]?.trim();
+          const possibleUPB = testRow[11]?.trim();
+          if (/^\d{5}$/.test(possibleMSA) && /^\d+$/.test(possibleUPB)) {
+            msaIdx = 7;
+            upbIdx = 11;
+            zipIdx = 18;
+          }
+        }
+      }
+
+      if (msaIdx === -1) {
+        document.getElementById('upload-status').textContent =
+          'Could not find MSA column. Expected: MSA, MSA_CODE, CBSA, or METRO_STAT_AREA';
+        return;
+      }
+
+      // Aggregate by MSA
+      const msaAgg = {};
+      let totalLoans = 0;
+      let totalUPB = 0;
+      const startRow = headers.some(h => /^[A-Z_]+$/.test(h)) ? 1 : 0; // skip header if present
+
+      for (let i = startRow; i < lines.length; i++) {
+        const cols = lines[i].split(delimiter).map(c => c.trim().replace(/"/g, ''));
+        const msa = cols[msaIdx];
+        if (!msa || msa === '' || msa === '00000' || msa === '     ') continue;
+
+        const upb = upbIdx !== -1 ? parseFloat(cols[upbIdx]) || 0 : 0;
+        const zip = zipIdx !== -1 ? cols[zipIdx] : '';
+
+        if (!msaAgg[msa]) {
+          msaAgg[msa] = { count: 0, totalUPB: 0, zips: new Set() };
+        }
+        msaAgg[msa].count++;
+        msaAgg[msa].totalUPB += upb;
+        if (zip) msaAgg[msa].zips.add(zip);
+        totalLoans++;
+        totalUPB += upb;
+      }
+
+      displayLoanData(msaAgg, totalLoans, totalUPB);
+    }
+
+    function displayLoanData(msaAgg, totalLoans, totalUPB) {
+      loanLayer.clearLayers();
+
+      const msaCodes = Object.keys(msaAgg);
+      if (msaCodes.length === 0) {
+        document.getElementById('upload-status').textContent = 'No MSA data found in file';
+        return;
+      }
+
+      // Find max for scaling
+      const maxCount = Math.max(...msaCodes.map(m => msaAgg[m].count));
+      const maxUPB = Math.max(...msaCodes.map(m => msaAgg[m].totalUPB));
+      let mapped = 0;
+
+      msaCodes.forEach(msa => {
+        const centroid = msaCentroids[msa];
+        if (!centroid) return;
+
+        mapped++;
+        const data = msaAgg[msa];
+        const pct = ((data.count / totalLoans) * 100).toFixed(2);
+        const radius = Math.max(8, Math.min(50, (data.count / maxCount) * 50));
+
+        const circle = L.circleMarker([centroid[0], centroid[1]], {
+          radius: radius,
+          fillColor: getHeatColor(data.count / maxCount),
+          color: '#fff',
+          weight: 1,
+          fillOpacity: 0.75
+        });
+
+        const upbStr = data.totalUPB > 0
+          ? `$${(data.totalUPB / 1e6).toFixed(1)}M`
+          : 'N/A';
+
+        circle.bindPopup(`
+          <div class="msa-popup">
+            <b>${centroid[2] || 'MSA ' + msa}</b><br>
+            <table>
+              <tr><td class="label">MSA Code:</td><td>${msa}</td></tr>
+              <tr><td class="label">Loans:</td><td>${data.count.toLocaleString()}</td></tr>
+              <tr><td class="label">% of Pool:</td><td>${pct}%</td></tr>
+              <tr><td class="label">Total UPB:</td><td>${upbStr}</td></tr>
+              <tr><td class="label">Zip Codes:</td><td>${data.zips.size}</td></tr>
+            </table>
+          </div>
+        `);
+
+        circle.bindTooltip(`${centroid[2] || msa}: ${data.count.toLocaleString()} loans (${pct}%)`, {
+          sticky: true
+        });
+
+        loanLayer.addLayer(circle);
+      });
+
+      const unmapped = msaCodes.length - mapped;
+      document.getElementById('upload-status').textContent =
+        `Loaded: ${totalLoans.toLocaleString()} loans across ${msaCodes.length} MSAs` +
+        (totalUPB > 0 ? ` | Total UPB: $${(totalUPB / 1e9).toFixed(2)}B` : '') +
+        (unmapped > 0 ? ` | ${unmapped} MSAs not mapped` : '');
+      document.getElementById('clear-btn').style.display = 'inline-block';
+    }
+
+    function getHeatColor(ratio) {
+      // Blue -> Yellow -> Red gradient
+      if (ratio < 0.25) return '#3388ff';
+      if (ratio < 0.50) return '#66bb6a';
+      if (ratio < 0.75) return '#ffca28';
+      return '#e94560';
+    }
+
+    function clearLoanData() {
+      loanLayer.clearLayers();
+      document.getElementById('upload-status').textContent =
+        'Supports Freddie Mac CRT pipe-delimited files, or CSV with MSA/zip + UPB columns';
+      document.getElementById('clear-btn').style.display = 'none';
+      document.getElementById('file-input').value = '';
+    }
+
     // --- Close info panel on map click ---
     map.on('click', () => {
       document.getElementById('info-panel').style.display = 'none';
     });
 
-    // --- Hide loading indicator once base tiles load ---
+    // --- Hide loading indicator ---
     darkBase.on('load', () => {
       document.getElementById('loading').style.display = 'none';
     });
-    // Fallback: hide after 3 seconds regardless
     setTimeout(() => {
       document.getElementById('loading').style.display = 'none';
     }, 3000);

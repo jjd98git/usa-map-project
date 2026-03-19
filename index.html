@@ -78,15 +78,31 @@
       border-radius: 2px;
     }
 
-    /* Upload control */
-    .upload-control {
+    /* Upload control + flood control shared */
+    .upload-control, .flood-control {
       background: rgba(26, 26, 46, 0.95);
       border: 1px solid #0f3460;
       border-radius: 8px;
       padding: 10px 14px;
       color: #e0e0ff;
       font-size: 0.85rem;
-      max-width: 220px;
+      max-width: 240px;
+    }
+    .flood-control { margin-top: 8px; }
+    .flood-control h4 { margin-bottom: 8px; color: #e94560; }
+    .flood-control select {
+      width: 100%;
+      background: #0f3460;
+      color: #e0e0ff;
+      border: 1px solid #4a6fa5;
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-size: 0.8rem;
+    }
+    .flood-control select option { background: #0f3460; }
+    .flood-status { color: #aab; font-size: 0.75rem; margin-top: 6px; }
+    .upload-control {
+      max-width: 240px;
     }
     .upload-control h4 { margin-bottom: 8px; color: #e94560; }
     .upload-control input[type="file"] { display: none; }
@@ -538,6 +554,143 @@
     };
     uploadControl.addTo(map);
 
+    // --- Historic flood events dropdown ---
+    const FLOOD_EVENTS = [
+      { label: "Hurricane Helene (Sep 2024)", disasters: [4827,4828,4829,4830,4831,4832,4848] },
+      { label: "Hurricane Milton (Oct 2024)", disasters: [4834] },
+      { label: "Hurricane Ian (Sep 2022)", disasters: [4673,4677] },
+      { label: "Hurricane Ida (Aug 2021)", disasters: [4611] },
+      { label: "Hurricane Harvey (Aug 2017)", disasters: [4332,4345] },
+      { label: "Hurricane Irma (Sep 2017)", disasters: [4337] },
+      { label: "Hurricane Maria (Sep 2017)", disasters: [4339,4340] },
+      { label: "Hurricane Florence (Sep 2018)", disasters: [4393,4401] },
+      { label: "Hurricane Michael (Oct 2018)", disasters: [4399] },
+      { label: "Vermont Flooding (Jul 2023)", disasters: [4720] },
+      { label: "E. Kentucky Floods (Jul 2022)", disasters: [4663] },
+      { label: "Louisiana Floods (Aug 2016)", disasters: [4277] },
+      { label: "Midwest Floods (Mar 2019)", disasters: [4420] },
+      { label: "Michigan Floods (May 2020)", disasters: [4547] },
+    ];
+
+    let floodLayer = L.layerGroup();
+    layerControl.addOverlay(floodLayer, 'Historic Flood Area');
+
+    // Counties GeoJSON URL (Census/plotly simplified)
+    const COUNTIES_GEOJSON_URL = 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json';
+    let countiesGeoData = null; // cached after first load
+
+    const floodControl = L.control({ position: 'topleft' });
+    floodControl.onAdd = function () {
+      const div = L.DomUtil.create('div', 'flood-control');
+      let opts = '<option value="">-- Select a flood event --</option>';
+      FLOOD_EVENTS.forEach((e, i) => {
+        opts += `<option value="${i}">${e.label}</option>`;
+      });
+      div.innerHTML = `
+        <h4>Historic Flood Events</h4>
+        <select id="flood-select">${opts}</select>
+        <div class="flood-status" id="flood-status">Select an event to highlight affected counties</div>
+      `;
+      L.DomEvent.disableClickPropagation(div);
+      return div;
+    };
+    floodControl.addTo(map);
+
+    document.addEventListener('change', function(e) {
+      if (e.target.id !== 'flood-select') return;
+      const idx = e.target.value;
+      if (idx === '') {
+        floodLayer.clearLayers();
+        document.getElementById('flood-status').textContent = 'Select an event to highlight affected counties';
+        return;
+      }
+      loadFloodEvent(FLOOD_EVENTS[parseInt(idx)]);
+    });
+
+    async function loadFloodEvent(event) {
+      const statusEl = document.getElementById('flood-status');
+      statusEl.textContent = 'Loading FEMA data...';
+      floodLayer.clearLayers();
+
+      try {
+        // Fetch disaster declarations from FEMA
+        const filter = event.disasters.map(n => `disasterNumber eq ${n}`).join(' or ');
+        const url = `https://www.fema.gov/api/open/v2/DisasterDeclarationsSummaries`
+          + `?$filter=${encodeURIComponent(filter)}`
+          + `&$select=disasterNumber,declarationTitle,state,designatedArea,fipsStateCode,fipsCountyCode,incidentBeginDate,incidentEndDate`
+          + `&$top=1000&$format=json`;
+
+        const resp = await fetch(url);
+        const data = await resp.json();
+        const records = data.DisasterDeclarationsSummaries || [];
+
+        if (records.length === 0) {
+          statusEl.textContent = 'No FEMA data found for this event.';
+          return;
+        }
+
+        // Build set of affected FIPS codes
+        const affectedFIPS = new Set();
+        const counties = [];
+        records.forEach(r => {
+          const fips = r.fipsStateCode + r.fipsCountyCode;
+          if (!affectedFIPS.has(fips)) {
+            affectedFIPS.add(fips);
+            counties.push({ fips, name: r.designatedArea, state: r.state });
+          }
+        });
+
+        statusEl.textContent = `Loading county boundaries (${affectedFIPS.size} counties)...`;
+
+        // Load counties GeoJSON if not cached
+        if (!countiesGeoData) {
+          const geoResp = await fetch(COUNTIES_GEOJSON_URL);
+          countiesGeoData = await geoResp.json();
+        }
+
+        // Filter to affected counties and add to map
+        const affectedFeatures = countiesGeoData.features.filter(f =>
+          affectedFIPS.has(f.id)
+        );
+
+        if (affectedFeatures.length === 0) {
+          statusEl.textContent = `${affectedFIPS.size} counties declared, but no matching boundaries found.`;
+          return;
+        }
+
+        const geoLayer = L.geoJSON({ type: 'FeatureCollection', features: affectedFeatures }, {
+          style: {
+            fillColor: '#ff1744',
+            fillOpacity: 0.35,
+            color: '#ff1744',
+            weight: 1.5,
+            opacity: 0.8
+          },
+          onEachFeature: (feature, layer) => {
+            const info = counties.find(c => c.fips === feature.id);
+            const name = info ? `${info.name}, ${info.state}` : `FIPS: ${feature.id}`;
+            layer.bindTooltip(name, { sticky: true });
+            layer.bindPopup(`<b>${name}</b><br>${records[0].declarationTitle}<br>` +
+              `Incident: ${records[0].incidentBeginDate?.substring(0,10) || 'N/A'}`);
+          }
+        });
+
+        floodLayer.addLayer(geoLayer);
+        if (!map.hasLayer(floodLayer)) floodLayer.addTo(map);
+
+        // Zoom to affected area
+        map.fitBounds(geoLayer.getBounds(), { padding: [30, 30] });
+
+        const title = records[0].declarationTitle || event.label;
+        const states = [...new Set(records.map(r => r.state))].join(', ');
+        statusEl.textContent = `${title} — ${affectedFIPS.size} counties (${states})`;
+
+      } catch (err) {
+        console.error('Flood event load error:', err);
+        statusEl.textContent = 'Error loading flood data. Check console.';
+      }
+    }
+
     // --- Legend ---
     const legend = L.control({ position: 'bottomright' });
     legend.onAdd = function () {
@@ -549,8 +702,10 @@
         <div><i style="background:#4264fb;opacity:0.5"></i> FEMA Flood Zones</div>
         <div><i style="background:#e94560;opacity:0.7;border-radius:50%"></i> MSA Concentrations (size=loans, color=RBC)</div>
         <div><i style="background:#ff9800;opacity:0.5;border-radius:50%;width:8px;height:8px"></i> Loan Dots (by 3-digit ZIP)</div>
+        <div><i style="background:#ff1744;opacity:0.35"></i> Historic Flood Area</div>
         <div style="margin-top:6px;font-size:0.75rem;color:#999;">
-          Upload a loan tape for ERCF capital analysis.
+          Upload a loan tape for ERCF capital analysis.<br>
+          Select a flood event to see affected counties.
         </div>
       `;
       return div;

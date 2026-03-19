@@ -5,12 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Interactive USA Map — MSAs &amp; FEMA Flood Zones</title>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet (bundled locally) -->
+  <link rel="stylesheet" href="lib/leaflet.css" />
+  <script src="lib/leaflet.js"></script>
 
-  <!-- Esri Leaflet (for ArcGIS service layers) -->
-  <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
+  <!-- Esri Leaflet (bundled locally) -->
+  <script src="lib/esri-leaflet.js"></script>
+
+  <!-- TopoJSON client (bundled locally) -->
+  <script src="lib/topojson-client.min.js"></script>
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -161,20 +164,18 @@
       zoomControl: true
     });
 
-    // --- Base layers ---
+    // --- Base layers (all from arcgisonline.com — single domain) ---
     const darkBase = L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-        subdomains: 'abcd',
-        maxZoom: 20
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; Esri',
+        maxZoom: 16
       }
     );
 
     const lightBase = L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-        subdomains: 'abcd',
-        maxZoom: 20
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; Esri',
+        maxZoom: 16
       }
     );
 
@@ -185,54 +186,55 @@
       }
     );
 
+    const streetBase = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; Esri',
+        maxZoom: 19
+      }
+    );
+
     darkBase.addTo(map);
 
-    // --- State boundaries (GeoJSON) ---
+    // --- State boundaries (local GeoJSON) ---
     let statesLayer;
-    fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json')
+    fetch('lib/states-10m.json')
       .then(r => r.json())
       .then(us => {
-        // Convert TopoJSON to GeoJSON
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js';
-        script.onload = () => {
-          const geojson = topojson.feature(us, us.objects.states);
-          statesLayer = L.geoJSON(geojson, {
-            style: {
-              fillColor: 'transparent',
-              fillOpacity: 0,
-              color: '#4a6fa5',
-              weight: 1.5,
-              opacity: 0.8
-            },
-            onEachFeature: (feature, layer) => {
-              const info = stateData[feature.id];
-              if (info) {
-                layer.on({
-                  mouseover: e => {
-                    e.target.setStyle({ color: '#e94560', weight: 2.5, fillColor: '#e94560', fillOpacity: 0.1 });
-                  },
-                  mouseout: e => {
-                    statesLayer.resetStyle(e.target);
-                  },
-                  click: e => {
-                    const panel = document.getElementById('info-panel');
-                    document.getElementById('info-name').textContent = `${info.name} (${info.abbr})`;
-                    document.getElementById('info-detail').textContent =
-                      `Capital: ${info.capital} | Population: ~${info.pop}`;
-                    panel.style.display = 'block';
-                    map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
-                  }
-                });
-                layer.bindTooltip(info.name, {
-                  sticky: true,
-                  className: 'state-tooltip'
-                });
-              }
+        const geojson = topojson.feature(us, us.objects.states);
+        statesLayer = L.geoJSON(geojson, {
+          style: {
+            fillColor: 'transparent',
+            fillOpacity: 0,
+            color: '#4a6fa5',
+            weight: 1.5,
+            opacity: 0.8
+          },
+          onEachFeature: (feature, layer) => {
+            const info = stateData[feature.id];
+            if (info) {
+              layer.on({
+                mouseover: e => {
+                  e.target.setStyle({ color: '#e94560', weight: 2.5, fillColor: '#e94560', fillOpacity: 0.1 });
+                },
+                mouseout: e => {
+                  statesLayer.resetStyle(e.target);
+                },
+                click: e => {
+                  const panel = document.getElementById('info-panel');
+                  document.getElementById('info-name').textContent = `${info.name} (${info.abbr})`;
+                  document.getElementById('info-detail').textContent =
+                    `Capital: ${info.capital} | Population: ~${info.pop}`;
+                  panel.style.display = 'block';
+                  map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
+                }
+              });
+              layer.bindTooltip(info.name, {
+                sticky: true,
+                className: 'state-tooltip'
+              });
             }
-          }).addTo(map);
-        };
-        document.head.appendChild(script);
+          }
+        }).addTo(map);
       });
 
     // --- MSA Boundaries (Census Bureau TIGERweb ArcGIS service) ---
@@ -262,6 +264,7 @@
     const baseLayers = {
       'Dark': darkBase,
       'Light': lightBase,
+      'Street': streetBase,
       'Satellite': satelliteBase
     };
 

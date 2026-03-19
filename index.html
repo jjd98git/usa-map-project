@@ -558,8 +558,8 @@
     legend.addTo(map);
 
     // --- Loan tape parsing ---
-    // Freddie Mac CRT Reference Pool Disclosure Layout (v3.7, 90 fields, pipe-delimited, NO header row)
-    // Key 0-indexed positions used for ERCF:
+    // Freddie Mac CRT Reference Pool Disclosure Layout (v3.7, ~90 fields, pipe-delimited, NO header)
+    // Field 0 = CCYYMM period
     const FMC = {
       PERIOD: 0, POOL: 1, LOAN_ID: 2, AMORT_TYPE: 3, SELLER: 4,
       STATE: 5, ZIP: 6, MSA: 7,
@@ -567,7 +567,19 @@
       PURPOSE: 14, CHANNEL: 15, PROP_TYPE: 16, NUM_UNITS: 17,
       OCC_STATUS: 18, FTHB: 20,
       FICO: 22, OLTV: 23, OCLTV: 24, DTI: 25, MI_PCT: 26,
-      LOAN_AGE: 33, CUR_UPB: 39, ELTV: 59
+      LOAN_AGE: 33, CUR_UPB: 39, ELTV: 59, IO: -1
+    };
+
+    // Fannie Mae CAS/CIRT Layout (~104 fields, pipe-delimited, NO header)
+    // Field 0 = Reference Pool ID (4-char alpha-numeric, e.g. "C18F")
+    const FNMA = {
+      POOL: 0, LOAN_ID: 1, PERIOD: 2, CHANNEL: 3, SELLER: 4, SERVICER: 5,
+      ORIG_RATE: 7, ORIG_UPB: 9, UPB_ISSUANCE: 10, CUR_UPB: 11,
+      ORIG_TERM: 12, LOAN_AGE: 15,
+      OLTV: 19, OCLTV: 20, DTI: 22,
+      FICO: 23, PURPOSE: 26, PROP_TYPE: 27, NUM_UNITS: 28,
+      OCC_STATUS: 29, STATE: 30, MSA: 31, ZIP: 32, MI_PCT: 33,
+      AMORT_TYPE: 34, IO: 36
     };
 
     document.getElementById('file-input').addEventListener('change', function(e) {
@@ -596,38 +608,56 @@
       const firstCols = firstLine.split(delimiter);
       let fm = null;  // field map
       let startRow = 0;
-      let isFMC = false; // is full Freddie Mac CRT format with ERCF fields
+      let source = 'unknown';
 
-      // Detect headerless Freddie Mac CRT (80-90+ pipe fields)
+      // --- Auto-detect format for pipe-delimited files ---
       if (delimiter === '|' && firstCols.length >= 40) {
         const f0 = (firstCols[0] || '').trim();
-        const f7 = (firstCols[7] || '').trim();
-        if (/^\d{6}$/.test(f0) && (/^\d{5}$/.test(f7) || f7 === '')) {
+
+        // Freddie Mac CRT: field 0 = CCYYMM (6-digit date), ~90 fields
+        if (/^\d{6}$/.test(f0)) {
           fm = FMC;
           startRow = 0;
-          isFMC = true;
-        } else {
+          source = 'Freddie Mac CRT';
+        }
+        // Fannie Mae CAS: field 0 = Pool ID (4-char alphanumeric like "C18F"), ~104 fields
+        else if (/^[A-Z0-9]{2,6}$/i.test(f0) && firstCols.length >= 80) {
+          fm = FNMA;
+          startRow = 0;
+          source = 'Fannie Mae CAS';
+        }
+        // With header row — check for known field names
+        else {
           const h = firstCols.map(c => c.trim().toUpperCase());
           if (h.includes('MSA') || h.some(x => x.includes('METROPOLITAN'))) {
             fm = {
               MSA: h.findIndex(x => x === 'MSA' || x.includes('METROPOLITAN')),
-              ZIP: h.findIndex(x => x.includes('POSTAL')), STATE: h.findIndex(x => x === 'PROPERTY STATE'),
+              ZIP: h.findIndex(x => x.includes('POSTAL') || x.includes('ZIP')),
+              STATE: h.findIndex(x => x.includes('STATE')),
               ORIG_UPB: h.findIndex(x => x.includes('ORIGINAL') && x.includes('UPB')),
-              FICO: h.findIndex(x => x === 'CREDIT SCORE'), OLTV: h.findIndex(x => x.includes('ORIGINAL') && x.includes('LTV') && !x.includes('COMBINED')),
-              DTI: h.findIndex(x => x.includes('DTI')), CUR_UPB: h.findIndex(x => x.includes('CURRENT') && x.includes('UPB')),
-              PURPOSE: h.findIndex(x => x.includes('PURPOSE')), CHANNEL: h.findIndex(x => x.includes('CHANNEL')),
-              PROP_TYPE: h.findIndex(x => x.includes('PROPERTY TYPE')), NUM_UNITS: h.findIndex(x => x.includes('UNITS')),
-              OCC_STATUS: h.findIndex(x => x.includes('OCCUPANCY')), AMORT_TYPE: h.findIndex(x => x.includes('AMORT')),
+              FICO: h.findIndex(x => x.includes('CREDIT SCORE') || x.includes('FICO')),
+              OLTV: h.findIndex(x => x.includes('ORIGINAL') && x.includes('LTV') && !x.includes('COMBINED')),
+              DTI: h.findIndex(x => x.includes('DTI') || x.includes('DEBT')),
+              CUR_UPB: h.findIndex(x => x.includes('CURRENT') && x.includes('UPB')),
+              PURPOSE: h.findIndex(x => x.includes('PURPOSE')),
+              CHANNEL: h.findIndex(x => x.includes('CHANNEL')),
+              PROP_TYPE: h.findIndex(x => x.includes('PROPERTY TYPE')),
+              NUM_UNITS: h.findIndex(x => x.includes('UNITS')),
+              OCC_STATUS: h.findIndex(x => x.includes('OCCUPANCY')),
+              AMORT_TYPE: h.findIndex(x => x.includes('AMORT') || x.includes('PRODUCT')),
               ORIG_TERM: h.findIndex(x => x.includes('ORIGINAL') && x.includes('TERM')),
-              LOAN_AGE: h.findIndex(x => x === 'LOAN AGE' || x.includes('AGE'))
+              LOAN_AGE: h.findIndex(x => x.includes('AGE')),
+              MI_PCT: h.findIndex(x => x.includes('INSURANCE') && x.includes('PERCENT')),
+              IO: h.findIndex(x => x.includes('INTEREST ONLY')),
+              ELTV: h.findIndex(x => x.includes('ESTIMATED') && x.includes('LTV'))
             };
             startRow = 1;
-            isFMC = true;
+            source = 'Header-detected';
           }
         }
       }
 
-      // Fallback: generic CSV
+      // Fallback: generic CSV/TSV
       if (!fm) {
         const h = firstCols.map(c => c.trim().toUpperCase().replace(/"/g, ''));
         const msaIdx = h.findIndex(x => x === 'MSA' || x === 'CBSA' || x.includes('METROPOLITAN'));
@@ -639,12 +669,14 @@
             FICO: h.findIndex(x => /FICO|CREDIT/.test(x)),
             OLTV: h.findIndex(x => /LTV/.test(x)), DTI: h.findIndex(x => /DTI/.test(x)),
             CUR_UPB: -1, PURPOSE: -1, CHANNEL: -1, PROP_TYPE: -1, NUM_UNITS: -1,
-            OCC_STATUS: -1, AMORT_TYPE: -1, ORIG_TERM: -1, LOAN_AGE: -1
+            OCC_STATUS: -1, AMORT_TYPE: -1, ORIG_TERM: -1, LOAN_AGE: -1,
+            MI_PCT: -1, IO: -1, ELTV: -1
           };
           startRow = 1;
+          source = 'CSV';
         } else {
           document.getElementById('upload-status').textContent =
-            'Could not detect format. Expected Freddie Mac CRT or CSV with MSA column.';
+            'Could not detect format. Supports: Freddie Mac CRT, Fannie Mae CAS, or CSV with MSA column.';
           return;
         }
       }
@@ -675,16 +707,17 @@
         const amort  = fm.AMORT_TYPE >= 0 ? (c[fm.AMORT_TYPE] || '').trim() : '';
         const origTerm=fm.ORIG_TERM >= 0 ? (c[fm.ORIG_TERM] || '').trim() : '360';
         const loanAge= fm.LOAN_AGE >= 0 ? (c[fm.LOAN_AGE] || '').trim() : '0';
+        const miPct  = fm.MI_PCT >= 0 ? (c[fm.MI_PCT] || '').trim() : '0';
+        const io     = fm.IO >= 0 ? (c[fm.IO] || '').trim() : '';
+        const eltv   = fm.ELTV >= 0 ? parseInt(c[fm.ELTV]) || 0 : 0;
 
-        // ERCF calculation
+        // ERCF calculation — uses conservative defaults for missing fields per Table 1
         const upbForCalc = curUPB > 0 ? curUPB : origUPB;
-        const ltvForCalc = oltv > 0 ? oltv : 80;
-        const ficoForCalc = (fico >= 300 && fico <= 850) ? fico : 600;
 
         const ercf = ERCF.calculate({
-          fico: ficoForCalc, ltv: ltvForCalc, upb: upbForCalc,
+          fico, ltv: oltv, upb: upbForCalc, eltv,
           purpose, occ, propType, numUnits, channel, dti,
-          amortType: amort, origTerm, loanAge
+          amortType: amort, origTerm, loanAge, miPct, io
         });
 
         // Aggregate by MSA
@@ -731,7 +764,7 @@
         totalCapital += ercf.capitalCET1;
       }
 
-      displayLoanData(msaAgg, zipAgg, totalLoans, totalUPB, totalRWA, totalCapital);
+      displayLoanData(msaAgg, zipAgg, totalLoans, totalUPB, totalRWA, totalCapital, source);
     }
 
     function avg(arr) {
@@ -746,7 +779,7 @@
     function fmtM(val) { return val >= 1e9 ? `$${(val/1e9).toFixed(2)}B` : `$${(val/1e6).toFixed(1)}M`; }
     function fmtK(val) { return val >= 1e6 ? `$${(val/1e6).toFixed(2)}M` : `$${(val/1e3).toFixed(0)}K`; }
 
-    function displayLoanData(msaAgg, zipAgg, totalLoans, totalUPB, totalRWA, totalCapital) {
+    function displayLoanData(msaAgg, zipAgg, totalLoans, totalUPB, totalRWA, totalCapital, source) {
       loanLayer.clearLayers();
       zipLayer.clearLayers();
 
@@ -856,7 +889,7 @@
       const unmapped = msaCodes.length - mapped;
       const avgPoolRW = totalRWA / totalUPB;
       document.getElementById('upload-status').innerHTML =
-        `<b>${totalLoans.toLocaleString()}</b> loans | <b>${msaCodes.length}</b> MSAs | ` +
+        `<b>${source}</b> | <b>${totalLoans.toLocaleString()}</b> loans | <b>${msaCodes.length}</b> MSAs | ` +
         `UPB: <b>${fmtM(totalUPB)}</b> | RBC: <b>${fmtK(totalCapital)}</b> | ` +
         `Pool RW: <b>${(avgPoolRW*100).toFixed(1)}%</b>` +
         (unmapped > 0 ? ` | ${unmapped} MSAs unmapped` : '');

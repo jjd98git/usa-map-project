@@ -613,16 +613,18 @@
       floodLayer.clearLayers();
 
       try {
-        // Fetch disaster declarations from FEMA
-        const filter = event.disasters.map(n => `disasterNumber eq ${n}`).join(' or ');
-        const url = `https://www.fema.gov/api/open/v2/DisasterDeclarationsSummaries`
-          + `?$filter=${encodeURIComponent(filter)}`
-          + `&$select=disasterNumber,declarationTitle,state,designatedArea,fipsStateCode,fipsCountyCode,incidentBeginDate,incidentEndDate`
-          + `&$top=1000&$format=json`;
-
-        const resp = await fetch(url);
-        const data = await resp.json();
-        const records = data.DisasterDeclarationsSummaries || [];
+        // Fetch disaster declarations from FEMA — one request per disaster number, merge results
+        let records = [];
+        for (const dn of event.disasters) {
+          const url = 'https://www.fema.gov/api/open/v2/DisasterDeclarationsSummaries'
+            + '?%24filter=disasterNumber%20eq%20' + dn
+            + '&%24select=disasterNumber,declarationTitle,state,designatedArea,fipsStateCode,fipsCountyCode,incidentBeginDate,incidentEndDate'
+            + '&%24top=1000&%24format=json';
+          const resp = await fetch(url);
+          if (!resp.ok) { console.warn('FEMA API error for DR-' + dn, resp.status); continue; }
+          const data = await resp.json();
+          records = records.concat(data.DisasterDeclarationsSummaries || []);
+        }
 
         if (records.length === 0) {
           statusEl.textContent = 'No FEMA data found for this event.';

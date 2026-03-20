@@ -43,7 +43,7 @@
     /* Info panel */
     .info-panel {
       position: fixed;
-      bottom: 20px;
+      bottom: 320px;
       left: 50%;
       transform: translateX(-50%);
       background: rgba(22, 33, 62, 0.95);
@@ -86,7 +86,7 @@
       padding: 10px 14px;
       color: #e0e0ff;
       font-size: 0.85rem;
-      max-width: 240px;
+      max-width: 260px;
     }
     .flood-control { margin-top: 8px; }
     .flood-control h4 { margin-bottom: 8px; color: #e94560; }
@@ -102,23 +102,24 @@
     .flood-control select option { background: #0f3460; }
     .flood-status { color: #aab; font-size: 0.75rem; margin-top: 6px; }
     .upload-control {
-      max-width: 240px;
+      max-width: 260px;
     }
     .upload-control h4 { margin-bottom: 8px; color: #e94560; }
     .upload-control input[type="file"] { display: none; }
     .upload-btn {
       display: inline-block;
-      background: #e94560;
       color: #fff;
-      padding: 6px 14px;
+      padding: 5px 12px;
       border-radius: 5px;
       cursor: pointer;
-      font-size: 0.85rem;
+      font-size: 0.78rem;
       border: none;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
-    .upload-btn:hover { background: #c73652; }
-    .upload-status { color: #aab; font-size: 0.75rem; margin-top: 4px; }
+    .upload-btn:hover { filter: brightness(0.85); }
+    .upload-btn.freddie { background: #1565c0; }
+    .upload-btn.fannie { background: #00897b; }
+    .upload-status { color: #aab; font-size: 0.72rem; margin-top: 4px; line-height: 1.4; }
     .clear-btn {
       display: none;
       background: #333;
@@ -131,8 +132,24 @@
       margin-top: 4px;
     }
     .clear-btn:hover { background: #444; }
+    .upload-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .file-tag {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 3px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      margin-right: 4px;
+    }
+    .file-tag.freddie { background: #1565c0; color: #fff; }
+    .file-tag.fannie { background: #00897b; color: #fff; }
 
-    /* Loading indicator — auto-hides via CSS */
+    /* Loading indicator */
     #loading {
       position: fixed;
       top: 50%;
@@ -155,6 +172,252 @@
     .msa-popup { font-size: 0.85rem; }
     .msa-popup td { padding: 2px 6px; }
     .msa-popup .label { color: #666; }
+
+    /* ====== DASHBOARD PANEL ====== */
+    .dashboard {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(16, 24, 48, 0.97);
+      border-top: 2px solid #e94560;
+      z-index: 1100;
+      font-size: 0.82rem;
+      transition: height 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(8px);
+    }
+    .dashboard.collapsed { height: 38px; overflow: hidden; }
+    .dashboard.expanded { height: 300px; }
+    .dashboard-header {
+      display: flex;
+      align-items: center;
+      padding: 7px 16px;
+      border-bottom: 1px solid #0f3460;
+      cursor: pointer;
+      min-height: 38px;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .dashboard-header h4 {
+      color: #e94560;
+      margin-right: 20px;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+    .dashboard-tabs {
+      display: flex;
+      gap: 2px;
+    }
+    .dashboard-tab {
+      padding: 4px 14px;
+      background: transparent;
+      border: 1px solid #0f3460;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      color: #778;
+      cursor: pointer;
+      font-size: 0.78rem;
+      font-family: inherit;
+    }
+    .dashboard-tab.active {
+      background: #0f3460;
+      color: #e0e0ff;
+    }
+    .dashboard-toggle {
+      margin-left: auto;
+      background: none;
+      border: none;
+      color: #e94560;
+      cursor: pointer;
+      font-size: 1.2rem;
+      font-family: monospace;
+      padding: 0 4px;
+    }
+    .dashboard-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 16px;
+    }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Overview tab */
+    .overview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+    .overview-card {
+      background: rgba(15, 52, 96, 0.4);
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      padding: 10px 14px;
+    }
+    .overview-card h5 {
+      color: #e94560;
+      margin-bottom: 6px;
+      font-size: 0.8rem;
+    }
+    .overview-card .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+      color: #bbc;
+      font-size: 0.78rem;
+    }
+    .overview-card .stat-row .val {
+      color: #e0e0ff;
+      font-weight: 600;
+    }
+
+    /* Delinquency tab */
+    .dlq-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      margin-bottom: 10px;
+    }
+    .dlq-table th, .dlq-table td {
+      padding: 5px 12px;
+      text-align: right;
+      border-bottom: 1px solid #1a2a4a;
+    }
+    .dlq-table th {
+      color: #e94560;
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+    .dlq-table th:first-child, .dlq-table td:first-child {
+      text-align: left;
+    }
+    .dlq-table tr:hover { background: rgba(15, 52, 96, 0.3); }
+    .dlq-positive { color: #4caf50; }
+    .dlq-negative { color: #ef5350; }
+    .dlq-neutral { color: #778; }
+
+    .heatmap-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .heatmap-controls label {
+      color: #aab;
+      cursor: pointer;
+      font-size: 0.78rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .heatmap-controls input[type="radio"] { accent-color: #e94560; }
+    .heatmap-legend {
+      display: flex;
+      gap: 3px;
+      align-items: center;
+      margin-left: 16px;
+      font-size: 0.7rem;
+      color: #778;
+    }
+    .heatmap-legend .swatch {
+      width: 14px;
+      height: 10px;
+      border-radius: 1px;
+    }
+
+    /* HPA tab */
+    .hpa-controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    .hpa-controls select {
+      background: #0f3460;
+      color: #e0e0ff;
+      border: 1px solid #4a6fa5;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 0.78rem;
+      font-family: inherit;
+    }
+    .hpa-chart-area {
+      display: flex;
+      gap: 20px;
+    }
+    .hpa-bars {
+      flex: 1;
+      max-width: 500px;
+    }
+    .hpa-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 3px;
+      height: 20px;
+    }
+    .hpa-year {
+      width: 36px;
+      color: #aab;
+      font-size: 0.72rem;
+      flex-shrink: 0;
+    }
+    .hpa-bar-track {
+      flex: 1;
+      height: 14px;
+      background: #1a2a4a;
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hpa-bar {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.4s ease;
+      position: absolute;
+      top: 0;
+    }
+    .hpa-bar.positive { background: #4caf50; left: 50%; }
+    .hpa-bar.negative { background: #ef5350; right: 50%; }
+    .hpa-bar-center {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: #445;
+    }
+    .hpa-value {
+      width: 56px;
+      text-align: right;
+      color: #e0e0ff;
+      font-size: 0.72rem;
+      flex-shrink: 0;
+      margin-left: 6px;
+    }
+    .hpa-summary {
+      min-width: 200px;
+    }
+    .hpa-summary .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      color: #bbc;
+      font-size: 0.75rem;
+      border-bottom: 1px solid #1a2a4a;
+    }
+    .hpa-summary .stat-row .val {
+      color: #e0e0ff;
+      font-weight: 600;
+    }
+    .hpa-note {
+      color: #667;
+      font-size: 0.7rem;
+      margin-top: 8px;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -165,12 +428,34 @@
   </div>
   <div id="loading">Loading map layers...</div>
 
-  <script>
-    // --- MSA code to name/lat/lng lookup (top ~400 MSAs) ---
-    // We'll dynamically query Census for MSA geometries, but we need centroid coords
-    // for circle markers. We'll build this from the loan data + a geocoding approach.
+  <!-- Analysis Dashboard -->
+  <div class="dashboard collapsed" id="dashboard">
+    <div class="dashboard-header" id="dash-header">
+      <h4 id="dash-title">Analysis Dashboard</h4>
+      <div class="dashboard-tabs" id="dash-tabs">
+        <button class="dashboard-tab active" data-tab="overview">Overview</button>
+        <button class="dashboard-tab" data-tab="delinquency">Delinquency</button>
+        <button class="dashboard-tab" data-tab="hpa">HPA</button>
+      </div>
+      <button class="dashboard-toggle" id="dash-toggle">&#9650;</button>
+    </div>
+    <div class="dashboard-body">
+      <div class="tab-pane active" id="tab-overview">
+        <div id="overview-content" style="color:#778;">Upload Freddie Mac and/or Fannie Mae loan tapes to begin analysis.</div>
+      </div>
+      <div class="tab-pane" id="tab-delinquency">
+        <div id="dlq-content" style="color:#778;">Upload loan tapes with delinquency data to see comparison.</div>
+      </div>
+      <div class="tab-pane" id="tab-hpa">
+        <div id="hpa-content" style="color:#778;">Upload loan tapes with ELTV data to see implied HPA by state.</div>
+      </div>
+    </div>
+  </div>
 
-    // --- State data ---
+  <script>
+    // ================================================================
+    //  STATE DATA
+    // ================================================================
     const stateData = {
       "01": { name: "Alabama", abbr: "AL", capital: "Montgomery", pop: "5.1M" },
       "02": { name: "Alaska", abbr: "AK", capital: "Juneau", pop: "733K" },
@@ -225,7 +510,13 @@
       "11": { name: "District of Columbia", abbr: "DC", capital: "N/A", pop: "672K" }
     };
 
-    // --- MSA centroids (CBSA code -> [lat, lng, name]) for the major MSAs ---
+    // State abbreviation -> FIPS lookup
+    const abbrToFips = {};
+    Object.entries(stateData).forEach(([fips, s]) => { abbrToFips[s.abbr] = fips; });
+
+    // ================================================================
+    //  MSA CENTROIDS
+    // ================================================================
     const msaCentroids = {
       "12060": [33.52, -86.80, "Atlanta-Sandy Springs-Alpharetta"],
       "12420": [30.33, -81.66, "Austin-Round Rock-Georgetown"],
@@ -418,7 +709,17 @@
       "47894": [38.89, -77.04, "Washington-Arlington-Alexandria"]
     };
 
-    // --- Initialize map ---
+    // ================================================================
+    //  DATA STORES
+    // ================================================================
+    let freddieData = null;  // { loans, byState, byMSA, byZip3, summary, hpa }
+    let fannieData  = null;
+    let stateFeatures = {};  // FIPS -> leaflet layer reference
+    let heatMapMode = 'off'; // off | freddie | fannie | combined | delta
+
+    // ================================================================
+    //  MAP SETUP
+    // ================================================================
     const map = L.map('map', {
       center: [39.5, -98.5],
       zoom: 5,
@@ -427,7 +728,6 @@
       zoomControl: true
     });
 
-    // --- Base layers (all from arcgisonline.com) ---
     const darkBase = L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
         attribution: '&copy; Esri', maxZoom: 16
@@ -450,111 +750,140 @@
     );
     darkBase.addTo(map);
 
-    // --- State boundaries (local GeoJSON) ---
+    // ================================================================
+    //  STATE BOUNDARIES (with heat map support)
+    // ================================================================
     let statesLayer;
+    const defaultStateStyle = {
+      fillColor: 'transparent', fillOpacity: 0,
+      color: '#4a6fa5', weight: 1.5, opacity: 0.8
+    };
+
     fetch('lib/states-10m.json')
       .then(r => r.json())
       .then(us => {
         const geojson = topojson.feature(us, us.objects.states);
         statesLayer = L.geoJSON(geojson, {
-          style: {
-            fillColor: 'transparent', fillOpacity: 0,
-            color: '#4a6fa5', weight: 1.5, opacity: 0.8
-          },
+          style: defaultStateStyle,
           onEachFeature: (feature, layer) => {
-            const info = stateData[feature.id];
+            const fips = feature.id;
+            stateFeatures[fips] = layer;
+            const info = stateData[fips];
             if (info) {
               layer.on({
                 mouseover: e => {
-                  e.target.setStyle({ color: '#e94560', weight: 2.5, fillColor: '#e94560', fillOpacity: 0.1 });
+                  if (heatMapMode === 'off') {
+                    e.target.setStyle({ color: '#e94560', weight: 2.5, fillColor: '#e94560', fillOpacity: 0.1 });
+                  } else {
+                    e.target.setStyle({ weight: 3, color: '#fff' });
+                  }
+                  updateDashboardHover(fips);
                 },
-                mouseout: e => { statesLayer.resetStyle(e.target); },
+                mouseout: e => {
+                  if (heatMapMode === 'off') {
+                    statesLayer.resetStyle(e.target);
+                  } else {
+                    applyHeatMapStyle(fips, layer);
+                  }
+                },
                 click: e => {
                   const panel = document.getElementById('info-panel');
                   document.getElementById('info-name').textContent = `${info.name} (${info.abbr})`;
-                  document.getElementById('info-detail').textContent =
-                    `Capital: ${info.capital} | Population: ~${info.pop}`;
+                  let detail = `Capital: ${info.capital} | Population: ~${info.pop}`;
+                  const stDlq = getStateDlqSummary(info.abbr);
+                  if (stDlq) {
+                    detail += ` | SDQ: ${stDlq.sdqRate.toFixed(2)}% (${stDlq.count} loans)`;
+                  }
+                  document.getElementById('info-detail').textContent = detail;
                   panel.style.display = 'block';
                   map.fitBounds(e.target.getBounds(), { padding: [50, 50] });
+                  // Update HPA tab to this state
+                  const hpaSel = document.getElementById('hpa-state-select');
+                  if (hpaSel) { hpaSel.value = info.abbr; renderHPA(); }
                 }
               });
               layer.bindTooltip(info.name, { sticky: true });
             }
           }
         }).addTo(map);
-        // Add to layer control now that it's loaded
         layerControl.addOverlay(statesLayer, 'State Borders');
       });
 
-    // --- Loan data layer (populated by file upload) ---
-    let loanLayer = L.layerGroup().addTo(map);
+    // ================================================================
+    //  LOAN LAYERS
+    // ================================================================
+    let freddieLoanLayer = L.layerGroup().addTo(map);
+    let fannieLoanLayer  = L.layerGroup().addTo(map);
+    let freddieZipLayer  = L.layerGroup();
+    let fannieZipLayer   = L.layerGroup();
 
-    // --- Layer control (created first so it always renders) ---
+    // ================================================================
+    //  LAYER CONTROL
+    // ================================================================
     const baseLayers = {
       'Dark': darkBase, 'Light': lightBase,
       'Street': streetBase, 'Satellite': satelliteBase
     };
     const layerControl = L.control.layers(baseLayers, {
-      'Loan Concentrations': loanLayer
+      'Freddie Loans (MSA)': freddieLoanLayer,
+      'Fannie Loans (MSA)': fannieLoanLayer,
+      'Freddie Dots (ZIP3)': freddieZipLayer,
+      'Fannie Dots (ZIP3)': fannieZipLayer
     }, {
       collapsed: false,
       position: 'topright'
     }).addTo(map);
 
-    // --- MSA Boundaries (Census Bureau TIGERweb) ---
+    // ================================================================
+    //  EXTERNAL LAYERS
+    // ================================================================
     try {
       const msaLayer = L.esri.dynamicMapLayer({
         url: 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer',
-        layers: [93],
-        opacity: 0.6,
-        transparent: true,
-        useCors: true
+        layers: [93], opacity: 0.6, transparent: true, useCors: true
       });
       layerControl.addOverlay(msaLayer, 'MSA Boundaries');
-      msaLayer.on('requesterror', function(e) {
-        console.warn('MSA layer error:', e);
-      });
-    } catch(e) { console.warn('MSA layer failed to load:', e); }
+      msaLayer.on('requesterror', function(e) { console.warn('MSA layer error:', e); });
+    } catch(e) { console.warn('MSA layer failed:', e); }
 
-    // --- FEMA National Flood Hazard Layer ---
     try {
       const femaFloodLayer = L.esri.dynamicMapLayer({
         url: 'https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer',
-        layers: [28],
-        opacity: 0.5,
-        transparent: true,
-        useCors: false
+        layers: [28], opacity: 0.5, transparent: true, useCors: false
       });
       layerControl.addOverlay(femaFloodLayer, 'FEMA Flood Zones (zoom in)');
-      femaFloodLayer.on('requesterror', function(e) {
-        console.warn('FEMA layer error:', e);
-      });
-    } catch(e) { console.warn('FEMA layer failed to load:', e); }
+      femaFloodLayer.on('requesterror', function(e) { console.warn('FEMA layer error:', e); });
+    } catch(e) { console.warn('FEMA layer failed:', e); }
 
-    // --- ZIP-level loan dot layer ---
-    let zipLayer = L.layerGroup();
-    layerControl.addOverlay(zipLayer, 'Loan Dots (by ZIP3)');
-
-    // --- File upload control ---
+    // ================================================================
+    //  UPLOAD CONTROL (Dual — Freddie + Fannie)
+    // ================================================================
     const uploadControl = L.control({ position: 'topleft' });
     uploadControl.onAdd = function () {
       const div = L.DomUtil.create('div', 'upload-control');
       div.innerHTML = `
         <h4>Loan Tape Upload</h4>
-        <label class="upload-btn" for="file-input">Choose File</label>
-        <input type="file" id="file-input" accept=".txt,.csv,.tsv,.pipe" />
-        <div class="upload-status" id="upload-status">
-          Freddie Mac CRT pipe-delimited or CSV with MSA column.<br>
-          Computes ERCF risk-based capital per loan.
+        <div class="upload-row">
+          <label class="upload-btn freddie" for="file-freddie">Freddie Mac</label>
+          <input type="file" id="file-freddie" accept=".txt,.csv,.tsv,.pipe" />
+          <label class="upload-btn fannie" for="file-fannie">Fannie Mae</label>
+          <input type="file" id="file-fannie" accept=".txt,.csv,.tsv,.pipe" />
         </div>
-        <button class="clear-btn" id="clear-btn" onclick="clearLoanData()">Clear Loan Data</button>
+        <div class="upload-status" id="upload-status">
+          Upload CRT/CAS pipe-delimited or CSV tapes.<br>
+          Computes ERCF capital + delinquency analysis.
+        </div>
+        <div id="loaded-files"></div>
+        <button class="clear-btn" id="clear-btn" onclick="clearAllData()">Clear All Data</button>
       `;
       L.DomEvent.disableClickPropagation(div);
       return div;
     };
     uploadControl.addTo(map);
 
-    // --- Historic flood events dropdown ---
+    // ================================================================
+    //  HISTORIC FLOOD EVENTS
+    // ================================================================
     const FLOOD_EVENTS = [
       { label: "Hurricane Helene (Sep 2024)", disasters: [4827,4828,4829,4830,4831,4832,4848] },
       { label: "Hurricane Milton (Oct 2024)", disasters: [4834] },
@@ -575,9 +904,8 @@
     let floodLayer = L.layerGroup();
     layerControl.addOverlay(floodLayer, 'Historic Flood Area');
 
-    // Counties GeoJSON URL (Census/plotly simplified)
     const COUNTIES_GEOJSON_URL = 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json';
-    let countiesGeoData = null; // cached after first load
+    let countiesGeoData = null;
 
     const floodControl = L.control({ position: 'topleft' });
     floodControl.onAdd = function () {
@@ -611,9 +939,7 @@
       const statusEl = document.getElementById('flood-status');
       statusEl.textContent = 'Loading FEMA data...';
       floodLayer.clearLayers();
-
       try {
-        // Fetch disaster declarations from FEMA — one request per disaster number, merge results
         let records = [];
         for (const dn of event.disasters) {
           const url = 'https://www.fema.gov/api/open/v2/DisasterDeclarationsSummaries'
@@ -625,13 +951,7 @@
           const data = await resp.json();
           records = records.concat(data.DisasterDeclarationsSummaries || []);
         }
-
-        if (records.length === 0) {
-          statusEl.textContent = 'No FEMA data found for this event.';
-          return;
-        }
-
-        // Build set of affected FIPS codes
+        if (records.length === 0) { statusEl.textContent = 'No FEMA data found.'; return; }
         const affectedFIPS = new Set();
         const counties = [];
         records.forEach(r => {
@@ -641,33 +961,18 @@
             counties.push({ fips, name: r.designatedArea, state: r.state });
           }
         });
-
         statusEl.textContent = `Loading county boundaries (${affectedFIPS.size} counties)...`;
-
-        // Load counties GeoJSON if not cached
         if (!countiesGeoData) {
           const geoResp = await fetch(COUNTIES_GEOJSON_URL);
           countiesGeoData = await geoResp.json();
         }
-
-        // Filter to affected counties and add to map
-        const affectedFeatures = countiesGeoData.features.filter(f =>
-          affectedFIPS.has(f.id)
-        );
-
+        const affectedFeatures = countiesGeoData.features.filter(f => affectedFIPS.has(f.id));
         if (affectedFeatures.length === 0) {
           statusEl.textContent = `${affectedFIPS.size} counties declared, but no matching boundaries found.`;
           return;
         }
-
         const geoLayer = L.geoJSON({ type: 'FeatureCollection', features: affectedFeatures }, {
-          style: {
-            fillColor: '#ff1744',
-            fillOpacity: 0.35,
-            color: '#ff1744',
-            weight: 1.5,
-            opacity: 0.8
-          },
+          style: { fillColor: '#ff1744', fillOpacity: 0.35, color: '#ff1744', weight: 1.5, opacity: 0.8 },
           onEachFeature: (feature, layer) => {
             const info = counties.find(c => c.fips === feature.id);
             const name = info ? `${info.name}, ${info.state}` : `FIPS: ${feature.id}`;
@@ -676,24 +981,21 @@
               `Incident: ${records[0].incidentBeginDate?.substring(0,10) || 'N/A'}`);
           }
         });
-
         floodLayer.addLayer(geoLayer);
         if (!map.hasLayer(floodLayer)) floodLayer.addTo(map);
-
-        // Zoom to affected area
         map.fitBounds(geoLayer.getBounds(), { padding: [30, 30] });
-
         const title = records[0].declarationTitle || event.label;
         const states = [...new Set(records.map(r => r.state))].join(', ');
         statusEl.textContent = `${title} — ${affectedFIPS.size} counties (${states})`;
-
       } catch (err) {
         console.error('Flood event load error:', err);
         statusEl.textContent = 'Error loading flood data. Check console.';
       }
     }
 
-    // --- Legend ---
+    // ================================================================
+    //  LEGEND
+    // ================================================================
     const legend = L.control({ position: 'bottomright' });
     legend.onAdd = function () {
       const div = L.DomUtil.create('div', 'legend');
@@ -702,21 +1004,24 @@
         <div><i style="background:#4a6fa5;opacity:0.8"></i> State Borders</div>
         <div><i style="background:#00e5ff;opacity:0.5"></i> MSA Boundaries</div>
         <div><i style="background:#4264fb;opacity:0.5"></i> FEMA Flood Zones</div>
-        <div><i style="background:#e94560;opacity:0.7;border-radius:50%"></i> MSA Concentrations (size=loans, color=RBC)</div>
-        <div><i style="background:#ff9800;opacity:0.5;border-radius:50%;width:8px;height:8px"></i> Loan Dots (by 3-digit ZIP)</div>
+        <div><i style="background:#1565c0;opacity:0.7;border-radius:50%"></i> Freddie MSA Bubbles</div>
+        <div><i style="background:#00897b;opacity:0.7;border-radius:50%"></i> Fannie MSA Bubbles</div>
+        <div><i style="background:#ff9800;opacity:0.5;border-radius:50%;width:8px;height:8px"></i> ZIP3 Dots</div>
         <div><i style="background:#ff1744;opacity:0.35"></i> Historic Flood Area</div>
+        <div><i style="background:linear-gradient(90deg,#4caf50,#ffca28,#ff9800,#e94560);opacity:0.6"></i> DLQ Heat Map</div>
         <div style="margin-top:6px;font-size:0.75rem;color:#999;">
-          Upload a loan tape for ERCF capital analysis.<br>
-          Select a flood event to see affected counties.
+          Upload loan tapes for ERCF + delinquency analysis.<br>
+          Dashboard at bottom shows comparison &amp; HPA.
         </div>
       `;
       return div;
     };
     legend.addTo(map);
 
-    // --- Loan tape parsing ---
-    // Freddie Mac CRT Reference Pool Disclosure Layout (v3.7, ~90 fields, pipe-delimited, NO header)
-    // Field 0 = CCYYMM period
+    // ================================================================
+    //  FIELD MAPS (with delinquency)
+    // ================================================================
+    // Freddie Mac CRT Reference Pool (~90 fields, pipe-delimited, NO header)
     const FMC = {
       PERIOD: 0, POOL: 1, LOAN_ID: 2, AMORT_TYPE: 3, SELLER: 4,
       STATE: 5, ZIP: 6, MSA: 7,
@@ -724,31 +1029,45 @@
       PURPOSE: 14, CHANNEL: 15, PROP_TYPE: 16, NUM_UNITS: 17,
       OCC_STATUS: 18, FTHB: 20,
       FICO: 22, OLTV: 23, OCLTV: 24, DTI: 25, MI_PCT: 26,
-      LOAN_AGE: 33, CUR_UPB: 39, ELTV: 59, IO: -1
+      LOAN_AGE: 33, DLQ_STATUS: 34, CUR_UPB: 39, ELTV: 59, IO: -1
     };
 
-    // Fannie Mae CAS/CIRT Layout (~104 fields, pipe-delimited, NO header)
-    // Field 0 = Reference Pool ID (4-char alpha-numeric, e.g. "C18F")
+    // Fannie Mae CAS/CIRT (~104 fields, pipe-delimited, NO header)
     const FNMA = {
       POOL: 0, LOAN_ID: 1, PERIOD: 2, CHANNEL: 3, SELLER: 4, SERVICER: 5,
       ORIG_RATE: 7, ORIG_UPB: 9, UPB_ISSUANCE: 10, CUR_UPB: 11,
-      ORIG_TERM: 12, LOAN_AGE: 15,
+      ORIG_TERM: 12, DLQ_STATUS: 14, LOAN_AGE: 15,
       OLTV: 19, OCLTV: 20, DTI: 22,
       FICO: 23, PURPOSE: 26, PROP_TYPE: 27, NUM_UNITS: 28,
       OCC_STATUS: 29, STATE: 30, MSA: 31, ZIP: 32, MI_PCT: 33,
-      AMORT_TYPE: 34, IO: 36
+      AMORT_TYPE: 34, IO: 36, ELTV: -1
     };
 
-    document.getElementById('file-input').addEventListener('change', function(e) {
+    // ================================================================
+    //  FILE INPUT HANDLERS
+    // ================================================================
+    document.getElementById('file-freddie').addEventListener('change', function(e) {
       const file = e.target.files[0];
       if (!file) return;
-      document.getElementById('upload-status').textContent = 'Reading file...';
+      document.getElementById('upload-status').textContent = 'Reading Freddie Mac file...';
       const reader = new FileReader();
-      reader.onload = function(evt) { parseLoanTape(evt.target.result, file.name); };
+      reader.onload = function(evt) { parseLoanTape(evt.target.result, file.name, 'freddie'); };
       reader.readAsText(file);
     });
 
-    function parseLoanTape(text, filename) {
+    document.getElementById('file-fannie').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById('upload-status').textContent = 'Reading Fannie Mae file...';
+      const reader = new FileReader();
+      reader.onload = function(evt) { parseLoanTape(evt.target.result, file.name, 'fannie'); };
+      reader.readAsText(file);
+    });
+
+    // ================================================================
+    //  PARSE LOAN TAPE
+    // ================================================================
+    function parseLoanTape(text, filename, sourceHint) {
       const lines = text.trim().split('\n');
       if (lines.length < 1) {
         document.getElementById('upload-status').textContent = 'Error: File appears empty';
@@ -763,51 +1082,21 @@
       }
 
       const firstCols = firstLine.split(delimiter);
-      let fm = null;  // field map
+      let fm = null;
       let startRow = 0;
       let source = 'unknown';
 
-      // --- Auto-detect format for pipe-delimited files ---
+      // Auto-detect pipe-delimited formats
       if (delimiter === '|' && firstCols.length >= 40) {
         const f0 = (firstCols[0] || '').trim();
-
-        // Freddie Mac CRT: field 0 = CCYYMM (6-digit date), ~90 fields
         if (/^\d{6}$/.test(f0)) {
-          fm = FMC;
-          startRow = 0;
-          source = 'Freddie Mac CRT';
-        }
-        // Fannie Mae CAS: field 0 = Pool ID (4-char alphanumeric like "C18F"), ~104 fields
-        else if (/^[A-Z0-9]{2,6}$/i.test(f0) && firstCols.length >= 80) {
-          fm = FNMA;
-          startRow = 0;
-          source = 'Fannie Mae CAS';
-        }
-        // With header row — check for known field names
-        else {
+          fm = FMC; startRow = 0; source = 'Freddie Mac CRT';
+        } else if (/^[A-Z0-9]{2,6}$/i.test(f0) && firstCols.length >= 80) {
+          fm = FNMA; startRow = 0; source = 'Fannie Mae CAS';
+        } else {
           const h = firstCols.map(c => c.trim().toUpperCase());
           if (h.includes('MSA') || h.some(x => x.includes('METROPOLITAN'))) {
-            fm = {
-              MSA: h.findIndex(x => x === 'MSA' || x.includes('METROPOLITAN')),
-              ZIP: h.findIndex(x => x.includes('POSTAL') || x.includes('ZIP')),
-              STATE: h.findIndex(x => x.includes('STATE')),
-              ORIG_UPB: h.findIndex(x => x.includes('ORIGINAL') && x.includes('UPB')),
-              FICO: h.findIndex(x => x.includes('CREDIT SCORE') || x.includes('FICO')),
-              OLTV: h.findIndex(x => x.includes('ORIGINAL') && x.includes('LTV') && !x.includes('COMBINED')),
-              DTI: h.findIndex(x => x.includes('DTI') || x.includes('DEBT')),
-              CUR_UPB: h.findIndex(x => x.includes('CURRENT') && x.includes('UPB')),
-              PURPOSE: h.findIndex(x => x.includes('PURPOSE')),
-              CHANNEL: h.findIndex(x => x.includes('CHANNEL')),
-              PROP_TYPE: h.findIndex(x => x.includes('PROPERTY TYPE')),
-              NUM_UNITS: h.findIndex(x => x.includes('UNITS')),
-              OCC_STATUS: h.findIndex(x => x.includes('OCCUPANCY')),
-              AMORT_TYPE: h.findIndex(x => x.includes('AMORT') || x.includes('PRODUCT')),
-              ORIG_TERM: h.findIndex(x => x.includes('ORIGINAL') && x.includes('TERM')),
-              LOAN_AGE: h.findIndex(x => x.includes('AGE')),
-              MI_PCT: h.findIndex(x => x.includes('INSURANCE') && x.includes('PERCENT')),
-              IO: h.findIndex(x => x.includes('INTEREST ONLY')),
-              ELTV: h.findIndex(x => x.includes('ESTIMATED') && x.includes('LTV'))
-            };
+            fm = buildHeaderFieldMap(h);
             startRow = 1;
             source = 'Header-detected';
           }
@@ -819,16 +1108,7 @@
         const h = firstCols.map(c => c.trim().toUpperCase().replace(/"/g, ''));
         const msaIdx = h.findIndex(x => x === 'MSA' || x === 'CBSA' || x.includes('METROPOLITAN'));
         if (msaIdx !== -1) {
-          fm = {
-            MSA: msaIdx, ZIP: h.findIndex(x => /ZIP|POSTAL/.test(x)),
-            STATE: h.findIndex(x => /STATE/.test(x)),
-            ORIG_UPB: h.findIndex(x => /UPB|AMOUNT/.test(x)),
-            FICO: h.findIndex(x => /FICO|CREDIT/.test(x)),
-            OLTV: h.findIndex(x => /LTV/.test(x)), DTI: h.findIndex(x => /DTI/.test(x)),
-            CUR_UPB: -1, PURPOSE: -1, CHANNEL: -1, PROP_TYPE: -1, NUM_UNITS: -1,
-            OCC_STATUS: -1, AMORT_TYPE: -1, ORIG_TERM: -1, LOAN_AGE: -1,
-            MI_PCT: -1, IO: -1, ELTV: -1
-          };
+          fm = buildHeaderFieldMap(h);
           startRow = 1;
           source = 'CSV';
         } else {
@@ -838,39 +1118,55 @@
         }
       }
 
+      // Determine source for storage
+      let storageKey = sourceHint;
+      if (!storageKey || storageKey === 'auto') {
+        storageKey = (source.includes('Freddie') || source.includes('FMC')) ? 'freddie' : 'fannie';
+      }
+
       // Parse and aggregate
-      const msaAgg = {};
-      const zipAgg = {};  // for zip-level dots
+      const msaAgg = {}, zipAgg = {}, stateAgg = {};
+      const hpaByState = {}; // state -> [{ origYear, hpa, upb }]
       let totalLoans = 0, totalUPB = 0, totalRWA = 0, totalCapital = 0;
+      let dlqCounts = { current: 0, d30: 0, d60: 0, d90plus: 0, unknown: 0 };
 
       for (let i = startRow; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
         const c = line.split(delimiter);
 
-        const msa    = (c[fm.MSA] || '').trim();
-        const zip    = fm.ZIP >= 0 ? (c[fm.ZIP] || '').trim() : '';
-        const state  = fm.STATE >= 0 ? (c[fm.STATE] || '').trim() : '';
-        const origUPB= fm.ORIG_UPB >= 0 ? parseFloat(c[fm.ORIG_UPB]) || 0 : 0;
-        const curUPB = fm.CUR_UPB >= 0 ? parseFloat(c[fm.CUR_UPB]) || 0 : 0;
-        const fico   = fm.FICO >= 0 ? parseInt(c[fm.FICO]) || 0 : 0;
-        const oltv   = fm.OLTV >= 0 ? parseInt(c[fm.OLTV]) || 0 : 0;
-        const dti    = fm.DTI >= 0 ? parseInt(c[fm.DTI]) || 0 : 0;
-        const purpose= fm.PURPOSE >= 0 ? (c[fm.PURPOSE] || '').trim() : '';
-        const channel= fm.CHANNEL >= 0 ? (c[fm.CHANNEL] || '').trim() : '';
-        const propType=fm.PROP_TYPE >= 0 ? (c[fm.PROP_TYPE] || '').trim() : '';
-        const numUnits=fm.NUM_UNITS >= 0 ? (c[fm.NUM_UNITS] || '').trim() : '1';
-        const occ    = fm.OCC_STATUS >= 0 ? (c[fm.OCC_STATUS] || '').trim() : '';
-        const amort  = fm.AMORT_TYPE >= 0 ? (c[fm.AMORT_TYPE] || '').trim() : '';
-        const origTerm=fm.ORIG_TERM >= 0 ? (c[fm.ORIG_TERM] || '').trim() : '360';
-        const loanAge= fm.LOAN_AGE >= 0 ? (c[fm.LOAN_AGE] || '').trim() : '0';
-        const miPct  = fm.MI_PCT >= 0 ? (c[fm.MI_PCT] || '').trim() : '0';
-        const io     = fm.IO >= 0 ? (c[fm.IO] || '').trim() : '';
-        const eltv   = fm.ELTV >= 0 ? parseInt(c[fm.ELTV]) || 0 : 0;
+        const msa     = (c[fm.MSA] || '').trim();
+        const zip     = fm.ZIP >= 0 ? (c[fm.ZIP] || '').trim() : '';
+        const state   = fm.STATE >= 0 ? (c[fm.STATE] || '').trim() : '';
+        const origUPB = fm.ORIG_UPB >= 0 ? parseFloat(c[fm.ORIG_UPB]) || 0 : 0;
+        const curUPB  = fm.CUR_UPB >= 0 ? parseFloat(c[fm.CUR_UPB]) || 0 : 0;
+        const fico    = fm.FICO >= 0 ? parseInt(c[fm.FICO]) || 0 : 0;
+        const oltv    = fm.OLTV >= 0 ? parseInt(c[fm.OLTV]) || 0 : 0;
+        const dti     = fm.DTI >= 0 ? parseInt(c[fm.DTI]) || 0 : 0;
+        const purpose = fm.PURPOSE >= 0 ? (c[fm.PURPOSE] || '').trim() : '';
+        const channel = fm.CHANNEL >= 0 ? (c[fm.CHANNEL] || '').trim() : '';
+        const propType= fm.PROP_TYPE >= 0 ? (c[fm.PROP_TYPE] || '').trim() : '';
+        const numUnits= fm.NUM_UNITS >= 0 ? (c[fm.NUM_UNITS] || '').trim() : '1';
+        const occ     = fm.OCC_STATUS >= 0 ? (c[fm.OCC_STATUS] || '').trim() : '';
+        const amort   = fm.AMORT_TYPE >= 0 ? (c[fm.AMORT_TYPE] || '').trim() : '';
+        const origTerm= fm.ORIG_TERM >= 0 ? (c[fm.ORIG_TERM] || '').trim() : '360';
+        const loanAge = fm.LOAN_AGE >= 0 ? (c[fm.LOAN_AGE] || '').trim() : '0';
+        const miPct   = fm.MI_PCT >= 0 ? (c[fm.MI_PCT] || '').trim() : '0';
+        const io      = fm.IO >= 0 ? (c[fm.IO] || '').trim() : '';
+        const eltv    = fm.ELTV >= 0 ? parseInt(c[fm.ELTV]) || 0 : 0;
 
-        // ERCF calculation — uses conservative defaults for missing fields per Table 1
+        // Delinquency status
+        const dlqRaw  = fm.DLQ_STATUS >= 0 ? (c[fm.DLQ_STATUS] || '').trim() : '';
+        const dlqNum  = parseDlq(dlqRaw);
+
+        if (dlqNum === 0) dlqCounts.current++;
+        else if (dlqNum === 1) dlqCounts.d30++;
+        else if (dlqNum === 2) dlqCounts.d60++;
+        else if (dlqNum >= 3) dlqCounts.d90plus++;
+        else dlqCounts.unknown++;
+
+        // ERCF
         const upbForCalc = curUPB > 0 ? curUPB : origUPB;
-
         const ercf = ERCF.calculate({
           fico, ltv: oltv, upb: upbForCalc, eltv,
           purpose, occ, propType, numUnits, channel, dti,
@@ -884,189 +1180,830 @@
               count: 0, totalOrigUPB: 0, totalCurUPB: 0,
               totalRWA: 0, totalCapCET1: 0, totalCapTotal: 0,
               ficos: [], ltvs: [], dtis: [], riskWeights: [],
-              zips: new Set(), states: new Set()
+              zips: new Set(), states: new Set(),
+              dlq: { current: 0, d30: 0, d60: 0, d90plus: 0 }
             };
           }
           const a = msaAgg[msa];
-          a.count++;
-          a.totalOrigUPB += origUPB;
-          a.totalCurUPB += curUPB;
-          a.totalRWA += ercf.rwa;
-          a.totalCapCET1 += ercf.capitalCET1;
-          a.totalCapTotal += ercf.capitalTotal;
+          a.count++; a.totalOrigUPB += origUPB; a.totalCurUPB += curUPB;
+          a.totalRWA += ercf.rwa; a.totalCapCET1 += ercf.capitalCET1; a.totalCapTotal += ercf.capitalTotal;
           a.riskWeights.push(ercf.riskWeight);
           if (fico > 300 && fico < 900) a.ficos.push(fico);
           if (oltv > 0 && oltv <= 200) a.ltvs.push(oltv);
           if (dti > 0 && dti <= 100) a.dtis.push(dti);
           if (zip) a.zips.add(zip);
           if (state) a.states.add(state);
+          if (dlqNum === 0) a.dlq.current++;
+          else if (dlqNum === 1) a.dlq.d30++;
+          else if (dlqNum === 2) a.dlq.d60++;
+          else if (dlqNum >= 3) a.dlq.d90plus++;
         }
 
-        // Aggregate by ZIP3 for dot placement
+        // Aggregate by ZIP3
         if (zip && zip.length >= 3) {
           const z3 = zip.substring(0, 3);
-          if (!zipAgg[z3]) {
-            zipAgg[z3] = { count: 0, totalUPB: 0, totalCap: 0, ficos: [], ltvs: [] };
-          }
-          zipAgg[z3].count++;
-          zipAgg[z3].totalUPB += origUPB;
-          zipAgg[z3].totalCap += ercf.capitalCET1;
+          if (!zipAgg[z3]) zipAgg[z3] = { count: 0, totalUPB: 0, totalCap: 0, ficos: [], ltvs: [] };
+          zipAgg[z3].count++; zipAgg[z3].totalUPB += origUPB; zipAgg[z3].totalCap += ercf.capitalCET1;
           if (fico > 300) zipAgg[z3].ficos.push(fico);
           if (oltv > 0) zipAgg[z3].ltvs.push(oltv);
         }
 
-        totalLoans++;
-        totalUPB += origUPB;
-        totalRWA += ercf.rwa;
-        totalCapital += ercf.capitalCET1;
+        // Aggregate by state (for heat map + HPA)
+        if (state && state.length === 2) {
+          if (!stateAgg[state]) {
+            stateAgg[state] = {
+              count: 0, totalUPB: 0, totalRWA: 0, totalCap: 0,
+              ficos: [], ltvs: [],
+              dlq: { current: 0, d30: 0, d60: 0, d90plus: 0, unknown: 0 }
+            };
+          }
+          const sa = stateAgg[state];
+          sa.count++; sa.totalUPB += origUPB; sa.totalRWA += ercf.rwa; sa.totalCap += ercf.capitalCET1;
+          if (fico > 300 && fico < 900) sa.ficos.push(fico);
+          if (oltv > 0 && oltv <= 200) sa.ltvs.push(oltv);
+          if (dlqNum === 0) sa.dlq.current++;
+          else if (dlqNum === 1) sa.dlq.d30++;
+          else if (dlqNum === 2) sa.dlq.d60++;
+          else if (dlqNum >= 3) sa.dlq.d90plus++;
+          else sa.dlq.unknown++;
+
+          // HPA by vintage (if ELTV and OLTV available)
+          if (eltv > 0 && oltv > 0 && curUPB > 0 && origUPB > 0) {
+            const origVal = origUPB / (oltv / 100);
+            const curVal  = curUPB / (eltv / 100);
+            const cumHPA  = (curVal - origVal) / origVal;
+            const ageM    = parseInt(loanAge) || 1;
+            // Compute origination year
+            const periodStr = fm.PERIOD >= 0 ? (c[fm.PERIOD] || '').trim() : '';
+            let origYear = 0;
+            if (/^\d{6}$/.test(periodStr)) {
+              const pY = parseInt(periodStr.substring(0, 4));
+              const pM = parseInt(periodStr.substring(4, 6));
+              const origMonths = (pY * 12 + pM) - ageM;
+              origYear = Math.floor(origMonths / 12);
+            }
+            if (origYear >= 2000 && origYear <= 2030) {
+              if (!hpaByState[state]) hpaByState[state] = {};
+              if (!hpaByState[state][origYear]) hpaByState[state][origYear] = { totalOrigVal: 0, totalCurVal: 0, count: 0 };
+              hpaByState[state][origYear].totalOrigVal += origVal;
+              hpaByState[state][origYear].totalCurVal += curVal;
+              hpaByState[state][origYear].count++;
+            }
+          }
+        }
+
+        totalLoans++; totalUPB += origUPB; totalRWA += ercf.rwa; totalCapital += ercf.capitalCET1;
       }
 
-      displayLoanData(msaAgg, zipAgg, totalLoans, totalUPB, totalRWA, totalCapital, source);
+      // Build summary
+      const summary = {
+        source, filename, totalLoans, totalUPB, totalRWA, totalCapital, dlqCounts,
+        avgRW: totalUPB > 0 ? totalRWA / totalUPB : 0,
+        sdqRate: totalLoans > 0 ? ((dlqCounts.d90plus) / totalLoans * 100) : 0,
+        dlq60Rate: totalLoans > 0 ? ((dlqCounts.d60 + dlqCounts.d90plus) / totalLoans * 100) : 0
+      };
+
+      // Compute HPA summary per state per vintage
+      const hpa = {};
+      Object.entries(hpaByState).forEach(([st, years]) => {
+        hpa[st] = {};
+        Object.entries(years).forEach(([yr, d]) => {
+          const cumHPA = (d.totalCurVal - d.totalOrigVal) / d.totalOrigVal;
+          hpa[st][yr] = { cumHPA: cumHPA * 100, count: d.count };
+        });
+      });
+
+      // Store data
+      const result = { msaAgg, zipAgg, stateAgg, summary, hpa };
+      if (storageKey === 'freddie') {
+        freddieData = result;
+      } else {
+        fannieData = result;
+      }
+
+      displayLoanData(storageKey, result);
+      updateDashboard();
+      updateHeatMap();
+
+      document.getElementById('clear-btn').style.display = 'inline-block';
     }
 
-    function avg(arr) {
-      return arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+    function buildHeaderFieldMap(h) {
+      return {
+        MSA: h.findIndex(x => x === 'MSA' || x.includes('METROPOLITAN')),
+        ZIP: h.findIndex(x => x.includes('POSTAL') || x.includes('ZIP')),
+        STATE: h.findIndex(x => x.includes('STATE')),
+        ORIG_UPB: h.findIndex(x => x.includes('ORIGINAL') && x.includes('UPB')),
+        FICO: h.findIndex(x => x.includes('CREDIT SCORE') || x.includes('FICO')),
+        OLTV: h.findIndex(x => x.includes('ORIGINAL') && x.includes('LTV') && !x.includes('COMBINED')),
+        OCLTV: h.findIndex(x => x.includes('COMBINED') && x.includes('LTV')),
+        DTI: h.findIndex(x => x.includes('DTI') || x.includes('DEBT')),
+        CUR_UPB: h.findIndex(x => x.includes('CURRENT') && x.includes('UPB')),
+        PURPOSE: h.findIndex(x => x.includes('PURPOSE')),
+        CHANNEL: h.findIndex(x => x.includes('CHANNEL')),
+        PROP_TYPE: h.findIndex(x => x.includes('PROPERTY TYPE')),
+        NUM_UNITS: h.findIndex(x => x.includes('UNITS')),
+        OCC_STATUS: h.findIndex(x => x.includes('OCCUPANCY')),
+        AMORT_TYPE: h.findIndex(x => x.includes('AMORT') || x.includes('PRODUCT')),
+        ORIG_TERM: h.findIndex(x => x.includes('ORIGINAL') && x.includes('TERM')),
+        LOAN_AGE: h.findIndex(x => x.includes('AGE')),
+        MI_PCT: h.findIndex(x => x.includes('INSURANCE') && x.includes('PERCENT')),
+        IO: h.findIndex(x => x.includes('INTEREST ONLY')),
+        ELTV: h.findIndex(x => x.includes('ESTIMATED') && x.includes('LTV')),
+        DLQ_STATUS: h.findIndex(x => /DELINQU|DLQ|DELQ/.test(x)),
+        PERIOD: h.findIndex(x => x.includes('PERIOD') || x.includes('REPORT'))
+      };
     }
-    function wAvg(weights, values) {
-      if (!weights.length) return 0;
-      let sumW = 0, sumWV = 0;
-      for (let i = 0; i < weights.length; i++) { sumW += weights[i]; sumWV += weights[i] * values[i]; }
-      return sumW > 0 ? sumWV / sumW : 0;
-    }
-    function fmtM(val) { return val >= 1e9 ? `$${(val/1e9).toFixed(2)}B` : `$${(val/1e6).toFixed(1)}M`; }
-    function fmtK(val) { return val >= 1e6 ? `$${(val/1e6).toFixed(2)}M` : `$${(val/1e3).toFixed(0)}K`; }
 
-    function displayLoanData(msaAgg, zipAgg, totalLoans, totalUPB, totalRWA, totalCapital, source) {
+    function parseDlq(raw) {
+      if (!raw || raw === '' || raw === 'XX' || raw === 'X') return -1;
+      if (/^RA?$/i.test(raw)) return 99; // REO
+      const n = parseInt(raw);
+      return isNaN(n) ? -1 : n;
+    }
+
+    // ================================================================
+    //  DISPLAY LOAN DATA ON MAP
+    // ================================================================
+    function displayLoanData(sourceKey, data) {
+      const { msaAgg, zipAgg, summary } = data;
+      const loanLayer = sourceKey === 'freddie' ? freddieLoanLayer : fannieLoanLayer;
+      const zipLayer  = sourceKey === 'freddie' ? freddieZipLayer : fannieZipLayer;
+      const bubbleColor = sourceKey === 'freddie' ? '#1565c0' : '#00897b';
+      const dotColor    = sourceKey === 'freddie' ? '#42a5f5' : '#4db6ac';
+
       loanLayer.clearLayers();
       zipLayer.clearLayers();
 
       const msaCodes = Object.keys(msaAgg);
       if (msaCodes.length === 0) {
-        document.getElementById('upload-status').textContent = 'No MSA data found in file';
+        document.getElementById('upload-status').textContent = 'No MSA data found in file.';
         return;
       }
 
       const maxCount = Math.max(...msaCodes.map(m => msaAgg[m].count));
-      const maxCap = Math.max(...msaCodes.map(m => msaAgg[m].totalCapCET1));
       let mapped = 0;
 
-      // --- MSA bubble markers with ERCF data ---
+      // MSA bubble markers
       msaCodes.forEach(msa => {
         const centroid = msaCentroids[msa];
         if (!centroid) return;
         mapped++;
         const d = msaAgg[msa];
-        const pct = ((d.count / totalLoans) * 100).toFixed(2);
+        const pct = ((d.count / summary.totalLoans) * 100).toFixed(2);
         const radius = Math.max(8, Math.min(50, (d.count / maxCount) * 50));
         const avgRW = avg(d.riskWeights);
+        const sdqPct = d.count > 0 ? ((d.dlq.d90plus) / d.count * 100) : 0;
 
-        // Color by capital intensity (avg risk weight)
         const circle = L.circleMarker([centroid[0], centroid[1]], {
-          radius: radius,
-          fillColor: getRWColor(avgRW),
-          color: '#fff',
-          weight: 1,
-          fillOpacity: 0.75
+          radius, fillColor: getRWColor(avgRW), color: bubbleColor, weight: 2, fillOpacity: 0.7
         });
 
-        const origStr = fmtM(d.totalOrigUPB);
-        const avgFico = avg(d.ficos);
-        const avgLTV = avg(d.ltvs);
-        const avgDTI = avg(d.dtis);
-
+        const avgFico = avg(d.ficos), avgLTV = avg(d.ltvs), avgDTI = avg(d.dtis);
         circle.bindPopup(`
           <div class="msa-popup">
-            <b>${centroid[2] || 'MSA ' + msa}</b>
+            <b style="color:${bubbleColor}">[${sourceKey === 'freddie' ? 'FRE' : 'FNM'}]</b> <b>${centroid[2] || 'MSA ' + msa}</b>
             <table>
-              <tr><td class="label">MSA Code:</td><td>${msa}</td></tr>
+              <tr><td class="label">MSA:</td><td>${msa}</td></tr>
               <tr><td class="label">Loans:</td><td>${d.count.toLocaleString()} (${pct}%)</td></tr>
-              <tr><td class="label">Orig UPB:</td><td>${origStr}</td></tr>
+              <tr><td class="label">Orig UPB:</td><td>${fmtM(d.totalOrigUPB)}</td></tr>
               <tr><td colspan="2" style="border-top:1px solid #ddd;padding-top:4px;font-weight:bold">ERCF Capital</td></tr>
               <tr><td class="label">RWA:</td><td>${fmtM(d.totalRWA)}</td></tr>
               <tr><td class="label">CET1 (4.5%):</td><td>${fmtK(d.totalCapCET1)}</td></tr>
-              <tr><td class="label">Total (8.0%):</td><td>${fmtK(d.totalCapTotal)}</td></tr>
               <tr><td class="label">Avg RW:</td><td>${(avgRW * 100).toFixed(1)}%</td></tr>
+              <tr><td colspan="2" style="border-top:1px solid #ddd;padding-top:4px;font-weight:bold">Delinquency</td></tr>
+              <tr><td class="label">Current:</td><td>${d.dlq.current.toLocaleString()}</td></tr>
+              <tr><td class="label">30 Day:</td><td>${d.dlq.d30.toLocaleString()}</td></tr>
+              <tr><td class="label">60 Day:</td><td>${d.dlq.d60.toLocaleString()}</td></tr>
+              <tr><td class="label">90+ Day:</td><td>${d.dlq.d90plus.toLocaleString()}</td></tr>
+              <tr><td class="label">SDQ Rate:</td><td style="color:${sdqPct > 3 ? '#ef5350' : sdqPct > 1 ? '#ffca28' : '#4caf50'}">${sdqPct.toFixed(2)}%</td></tr>
               <tr><td colspan="2" style="border-top:1px solid #ddd;padding-top:4px;font-weight:bold">Collateral</td></tr>
               ${avgFico > 0 ? `<tr><td class="label">Avg FICO:</td><td>${avgFico.toFixed(0)}</td></tr>` : ''}
               ${avgLTV > 0 ? `<tr><td class="label">Avg LTV:</td><td>${avgLTV.toFixed(1)}%</td></tr>` : ''}
               ${avgDTI > 0 ? `<tr><td class="label">Avg DTI:</td><td>${avgDTI.toFixed(1)}%</td></tr>` : ''}
-              <tr><td class="label">3-Digit ZIPs:</td><td>${d.zips.size}</td></tr>
             </table>
           </div>
         `);
 
         circle.bindTooltip(
-          `${centroid[2] || msa}: ${d.count.toLocaleString()} loans | RBC: ${fmtK(d.totalCapCET1)} | RW: ${(avgRW*100).toFixed(0)}%`,
+          `[${sourceKey === 'freddie' ? 'FRE' : 'FNM'}] ${centroid[2] || msa}: ${d.count.toLocaleString()} | SDQ: ${sdqPct.toFixed(1)}% | RW: ${(avgRW*100).toFixed(0)}%`,
           { sticky: true }
         );
         loanLayer.addLayer(circle);
       });
 
-      // --- ZIP3 dot markers ---
+      // ZIP3 dot markers
       const zipCodes = Object.keys(zipAgg);
       const maxZipCount = Math.max(...zipCodes.map(z => zipAgg[z].count));
-      let zipMapped = 0;
 
       zipCodes.forEach(z3 => {
         const coords = ZIP3GEO.getCoords(z3);
         if (!coords) return;
-        zipMapped++;
         const zd = zipAgg[z3];
         const r = Math.max(3, Math.min(12, (zd.count / maxZipCount) * 12));
-
         const dot = L.circleMarker(coords, {
-          radius: r,
-          fillColor: '#ff9800',
-          color: '#fff',
-          weight: 0.5,
-          fillOpacity: 0.5
+          radius: r, fillColor: dotColor, color: '#fff', weight: 0.5, fillOpacity: 0.5
         });
-
-        const zAvgFico = avg(zd.ficos);
-        const zAvgLTV = avg(zd.ltvs);
         dot.bindPopup(`
           <div class="msa-popup">
-            <b>ZIP3: ${z3}</b>
+            <b>[${sourceKey === 'freddie' ? 'FRE' : 'FNM'}] ZIP3: ${z3}</b>
             <table>
               <tr><td class="label">Loans:</td><td>${zd.count.toLocaleString()}</td></tr>
               <tr><td class="label">UPB:</td><td>${fmtM(zd.totalUPB)}</td></tr>
-              <tr><td class="label">RBC (CET1):</td><td>${fmtK(zd.totalCap)}</td></tr>
-              ${zAvgFico > 0 ? `<tr><td class="label">Avg FICO:</td><td>${zAvgFico.toFixed(0)}</td></tr>` : ''}
-              ${zAvgLTV > 0 ? `<tr><td class="label">Avg LTV:</td><td>${zAvgLTV.toFixed(0)}%</td></tr>` : ''}
+              <tr><td class="label">RBC:</td><td>${fmtK(zd.totalCap)}</td></tr>
             </table>
           </div>
         `);
-        dot.bindTooltip(`ZIP ${z3}: ${zd.count} loans`, { sticky: true });
+        dot.bindTooltip(`[${sourceKey === 'freddie' ? 'FRE' : 'FNM'}] ZIP ${z3}: ${zd.count} loans`, { sticky: true });
         zipLayer.addLayer(dot);
       });
 
-      // Add zip layer to map if not already
       if (!map.hasLayer(zipLayer)) zipLayer.addTo(map);
 
       // Scale zip dots on zoom
       function scaleZipDots() {
         const zoom = map.getZoom();
-        const scale = Math.pow(1.3, zoom - 5); // grows ~30% per zoom level, baseline at zoom 5
+        const scale = Math.pow(1.3, zoom - 5);
         zipLayer.eachLayer(function(layer) {
           if (layer._baseRadius === undefined) layer._baseRadius = layer.getRadius();
           layer.setRadius(layer._baseRadius * scale);
         });
       }
-      map.off('zoomend', scaleZipDots); // remove old listener if re-uploading
-      map.on('zoomend', scaleZipDots);
+      map.off('zoomend.zip_' + sourceKey);
+      map.on('zoomend.zip_' + sourceKey, scaleZipDots);
 
+      // Update status
       const unmapped = msaCodes.length - mapped;
-      const avgPoolRW = totalRWA / totalUPB;
-      document.getElementById('upload-status').innerHTML =
-        `<b>${source}</b> | <b>${totalLoans.toLocaleString()}</b> loans | <b>${msaCodes.length}</b> MSAs | ` +
-        `UPB: <b>${fmtM(totalUPB)}</b> | RBC: <b>${fmtK(totalCapital)}</b> | ` +
-        `Pool RW: <b>${(avgPoolRW*100).toFixed(1)}%</b>` +
-        (unmapped > 0 ? ` | ${unmapped} MSAs unmapped` : '');
-      document.getElementById('clear-btn').style.display = 'inline-block';
+      const tag = sourceKey === 'freddie'
+        ? '<span class="file-tag freddie">FRE</span>'
+        : '<span class="file-tag fannie">FNM</span>';
+
+      const loadedDiv = document.getElementById('loaded-files');
+      const existingTag = loadedDiv.querySelector(`.file-info-${sourceKey}`);
+      const info = `<div class="file-info-${sourceKey}" style="margin-top:4px;font-size:0.72rem;color:#bbc;">
+        ${tag} ${summary.totalLoans.toLocaleString()} loans | ${fmtM(summary.totalUPB)} UPB | SDQ: ${summary.sdqRate.toFixed(2)}% | RW: ${(summary.avgRW*100).toFixed(1)}%
+        ${unmapped > 0 ? ` | ${unmapped} unmapped MSAs` : ''}
+      </div>`;
+      if (existingTag) existingTag.outerHTML = info;
+      else loadedDiv.innerHTML += info;
+
+      document.getElementById('upload-status').textContent = `${summary.source} loaded successfully.`;
     }
 
+    // ================================================================
+    //  HEAT MAP (Delinquency by State)
+    // ================================================================
+    function updateHeatMap() {
+      if (!statesLayer || heatMapMode === 'off') return;
+      Object.entries(stateFeatures).forEach(([fips, layer]) => {
+        applyHeatMapStyle(fips, layer);
+      });
+    }
+
+    function applyHeatMapStyle(fips, layer) {
+      if (heatMapMode === 'off') {
+        layer.setStyle(defaultStateStyle);
+        return;
+      }
+      const info = stateData[fips];
+      if (!info) return;
+      const abbr = info.abbr;
+
+      let sdqRate = null;
+      if (heatMapMode === 'freddie' && freddieData) {
+        const sa = freddieData.stateAgg[abbr];
+        if (sa && sa.count > 0) sdqRate = (sa.dlq.d90plus / sa.count) * 100;
+      } else if (heatMapMode === 'fannie' && fannieData) {
+        const sa = fannieData.stateAgg[abbr];
+        if (sa && sa.count > 0) sdqRate = (sa.dlq.d90plus / sa.count) * 100;
+      } else if (heatMapMode === 'combined') {
+        const fc = freddieData?.stateAgg[abbr], fn = fannieData?.stateAgg[abbr];
+        const total = (fc?.count || 0) + (fn?.count || 0);
+        const d90 = (fc?.dlq.d90plus || 0) + (fn?.dlq.d90plus || 0);
+        if (total > 0) sdqRate = (d90 / total) * 100;
+      } else if (heatMapMode === 'delta') {
+        const fc = freddieData?.stateAgg[abbr], fn = fannieData?.stateAgg[abbr];
+        const freRate = fc && fc.count > 0 ? (fc.dlq.d90plus / fc.count) * 100 : null;
+        const fnmRate = fn && fn.count > 0 ? (fn.dlq.d90plus / fn.count) * 100 : null;
+        if (freRate !== null && fnmRate !== null) {
+          sdqRate = freRate - fnmRate; // positive = Freddie worse
+        }
+      }
+
+      if (sdqRate === null) {
+        layer.setStyle({ ...defaultStateStyle, fillColor: '#333', fillOpacity: 0.15 });
+        return;
+      }
+
+      let color, opacity;
+      if (heatMapMode === 'delta') {
+        // Diverging: blue (Fannie worse) -> white -> red (Freddie worse)
+        const abs = Math.min(Math.abs(sdqRate), 5);
+        opacity = 0.2 + (abs / 5) * 0.5;
+        color = sdqRate > 0 ? '#ef5350' : sdqRate < 0 ? '#42a5f5' : '#888';
+      } else {
+        color = getDlqColor(sdqRate);
+        opacity = 0.25 + Math.min(sdqRate / 8, 0.55);
+      }
+
+      layer.setStyle({
+        fillColor: color, fillOpacity: opacity,
+        color: '#556', weight: 1.2, opacity: 0.8
+      });
+    }
+
+    function getDlqColor(rate) {
+      if (rate < 0.5) return '#4caf50';
+      if (rate < 1.0) return '#8bc34a';
+      if (rate < 2.0) return '#ffca28';
+      if (rate < 3.5) return '#ff9800';
+      if (rate < 5.0) return '#f44336';
+      return '#b71c1c';
+    }
+
+    function setHeatMapMode(mode) {
+      heatMapMode = mode;
+      if (mode === 'off' && statesLayer) {
+        statesLayer.resetStyle();
+      }
+      updateHeatMap();
+    }
+
+    function getStateDlqSummary(abbr) {
+      const fc = freddieData?.stateAgg[abbr], fn = fannieData?.stateAgg[abbr];
+      const count = (fc?.count || 0) + (fn?.count || 0);
+      if (count === 0) return null;
+      const d90 = (fc?.dlq.d90plus || 0) + (fn?.dlq.d90plus || 0);
+      return { count, sdqRate: (d90 / count) * 100 };
+    }
+
+    // ================================================================
+    //  DASHBOARD
+    // ================================================================
+    // Tab switching
+    document.getElementById('dash-tabs').addEventListener('click', function(e) {
+      if (!e.target.classList.contains('dashboard-tab')) return;
+      document.querySelectorAll('.dashboard-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      e.target.classList.add('active');
+      document.getElementById('tab-' + e.target.dataset.tab).classList.add('active');
+    });
+
+    // Toggle expand/collapse
+    document.getElementById('dash-header').addEventListener('click', function(e) {
+      if (e.target.classList.contains('dashboard-tab')) return;
+      const dash = document.getElementById('dashboard');
+      const toggle = document.getElementById('dash-toggle');
+      if (dash.classList.contains('collapsed')) {
+        dash.classList.remove('collapsed');
+        dash.classList.add('expanded');
+        toggle.innerHTML = '&#9660;';
+      } else {
+        dash.classList.remove('expanded');
+        dash.classList.add('collapsed');
+        toggle.innerHTML = '&#9650;';
+      }
+    });
+
+    function expandDashboard() {
+      const dash = document.getElementById('dashboard');
+      if (dash.classList.contains('collapsed')) {
+        dash.classList.remove('collapsed');
+        dash.classList.add('expanded');
+        document.getElementById('dash-toggle').innerHTML = '&#9660;';
+      }
+    }
+
+    function updateDashboard() {
+      expandDashboard();
+      renderOverviewTab();
+      renderDelinquencyTab();
+      renderHPATab();
+    }
+
+    function updateDashboardHover(fips) {
+      // Update dashboard title with hovered state info
+      const info = stateData[fips];
+      if (!info) return;
+      const dlq = getStateDlqSummary(info.abbr);
+      let title = 'Analysis Dashboard';
+      if (dlq) {
+        title += ` — ${info.name}: ${dlq.count.toLocaleString()} loans, SDQ ${dlq.sdqRate.toFixed(2)}%`;
+      }
+      document.getElementById('dash-title').textContent = title;
+    }
+
+    // --- Overview Tab ---
+    function renderOverviewTab() {
+      const el = document.getElementById('overview-content');
+      if (!freddieData && !fannieData) {
+        el.innerHTML = '<div style="color:#778;">Upload Freddie Mac and/or Fannie Mae loan tapes to begin analysis.</div>';
+        return;
+      }
+
+      let html = '<div class="overview-grid">';
+
+      if (freddieData) {
+        const s = freddieData.summary;
+        html += `<div class="overview-card">
+          <h5><span class="file-tag freddie">FRE</span> Freddie Mac</h5>
+          <div class="stat-row"><span>Loans</span><span class="val">${s.totalLoans.toLocaleString()}</span></div>
+          <div class="stat-row"><span>UPB</span><span class="val">${fmtM(s.totalUPB)}</span></div>
+          <div class="stat-row"><span>RBC (CET1)</span><span class="val">${fmtK(s.totalCapital)}</span></div>
+          <div class="stat-row"><span>Pool RW</span><span class="val">${(s.avgRW*100).toFixed(1)}%</span></div>
+          <div class="stat-row"><span>SDQ Rate</span><span class="val" style="color:${s.sdqRate > 3 ? '#ef5350' : '#4caf50'}">${s.sdqRate.toFixed(2)}%</span></div>
+        </div>`;
+      }
+
+      if (fannieData) {
+        const s = fannieData.summary;
+        html += `<div class="overview-card">
+          <h5><span class="file-tag fannie">FNM</span> Fannie Mae</h5>
+          <div class="stat-row"><span>Loans</span><span class="val">${s.totalLoans.toLocaleString()}</span></div>
+          <div class="stat-row"><span>UPB</span><span class="val">${fmtM(s.totalUPB)}</span></div>
+          <div class="stat-row"><span>RBC (CET1)</span><span class="val">${fmtK(s.totalCapital)}</span></div>
+          <div class="stat-row"><span>Pool RW</span><span class="val">${(s.avgRW*100).toFixed(1)}%</span></div>
+          <div class="stat-row"><span>SDQ Rate</span><span class="val" style="color:${s.sdqRate > 3 ? '#ef5350' : '#4caf50'}">${s.sdqRate.toFixed(2)}%</span></div>
+        </div>`;
+      }
+
+      if (freddieData && fannieData) {
+        const fs = freddieData.summary, ns = fannieData.summary;
+        const tLoans = fs.totalLoans + ns.totalLoans;
+        const tUPB = fs.totalUPB + ns.totalUPB;
+        const tCap = fs.totalCapital + ns.totalCapital;
+        const tRWA = fs.totalRWA + ns.totalRWA;
+        const combRW = tUPB > 0 ? tRWA / tUPB : 0;
+        const tD90 = fs.dlqCounts.d90plus + ns.dlqCounts.d90plus;
+        const combSDQ = tLoans > 0 ? (tD90 / tLoans * 100) : 0;
+
+        html += `<div class="overview-card">
+          <h5 style="color:#ab47bc;">Combined</h5>
+          <div class="stat-row"><span>Loans</span><span class="val">${tLoans.toLocaleString()}</span></div>
+          <div class="stat-row"><span>UPB</span><span class="val">${fmtM(tUPB)}</span></div>
+          <div class="stat-row"><span>RBC (CET1)</span><span class="val">${fmtK(tCap)}</span></div>
+          <div class="stat-row"><span>Pool RW</span><span class="val">${(combRW*100).toFixed(1)}%</span></div>
+          <div class="stat-row"><span>SDQ Rate</span><span class="val" style="color:${combSDQ > 3 ? '#ef5350' : '#4caf50'}">${combSDQ.toFixed(2)}%</span></div>
+        </div>`;
+      }
+
+      html += '</div>';
+      el.innerHTML = html;
+    }
+
+    // --- Delinquency Tab ---
+    function renderDelinquencyTab() {
+      const el = document.getElementById('dlq-content');
+      if (!freddieData && !fannieData) {
+        el.innerHTML = '<div style="color:#778;">Upload loan tapes to see delinquency comparison.</div>';
+        return;
+      }
+
+      let html = '<table class="dlq-table"><thead><tr>';
+      html += '<th>Source</th><th>Loans</th><th>Current</th><th>30 Day</th><th>60 Day</th><th>90+ Day</th><th>SDQ Rate</th><th>60+ Rate</th>';
+      html += '</tr></thead><tbody>';
+
+      function dlqRow(label, d, total, cls) {
+        const sdq = total > 0 ? (d.d90plus / total * 100) : 0;
+        const d60plus = total > 0 ? ((d.d60 + d.d90plus) / total * 100) : 0;
+        return `<tr>
+          <td><b>${label}</b></td>
+          <td>${total.toLocaleString()}</td>
+          <td>${total > 0 ? (d.current / total * 100).toFixed(2) + '%' : '-'}</td>
+          <td>${total > 0 ? (d.d30 / total * 100).toFixed(2) + '%' : '-'}</td>
+          <td>${total > 0 ? (d.d60 / total * 100).toFixed(2) + '%' : '-'}</td>
+          <td>${total > 0 ? (d.d90plus / total * 100).toFixed(2) + '%' : '-'}</td>
+          <td style="color:${sdq > 3 ? '#ef5350' : sdq > 1 ? '#ffca28' : '#4caf50'};font-weight:600">${sdq.toFixed(2)}%</td>
+          <td style="color:${d60plus > 4 ? '#ef5350' : d60plus > 2 ? '#ffca28' : '#4caf50'}">${d60plus.toFixed(2)}%</td>
+        </tr>`;
+      }
+
+      if (freddieData) {
+        html += dlqRow('<span class="file-tag freddie">FRE</span> Freddie', freddieData.summary.dlqCounts, freddieData.summary.totalLoans);
+      }
+      if (fannieData) {
+        html += dlqRow('<span class="file-tag fannie">FNM</span> Fannie', fannieData.summary.dlqCounts, fannieData.summary.totalLoans);
+      }
+
+      if (freddieData && fannieData) {
+        const fd = freddieData.summary.dlqCounts, nd = fannieData.summary.dlqCounts;
+        const ft = freddieData.summary.totalLoans, nt = fannieData.summary.totalLoans;
+        const combD = {
+          current: fd.current + nd.current, d30: fd.d30 + nd.d30,
+          d60: fd.d60 + nd.d60, d90plus: fd.d90plus + nd.d90plus
+        };
+        html += dlqRow('<b style="color:#ab47bc">Combined</b>', combD, ft + nt);
+
+        // Delta row
+        const freSDQ = ft > 0 ? (fd.d90plus / ft * 100) : 0;
+        const fnmSDQ = nt > 0 ? (nd.d90plus / nt * 100) : 0;
+        const delta = freSDQ - fnmSDQ;
+        const fre30 = ft > 0 ? (fd.d30 / ft * 100) : 0;
+        const fnm30 = nt > 0 ? (nd.d30 / nt * 100) : 0;
+        const fre60 = ft > 0 ? (fd.d60 / ft * 100) : 0;
+        const fnm60 = nt > 0 ? (nd.d60 / nt * 100) : 0;
+
+        function fmtDelta(v) {
+          const cls = v > 0 ? 'dlq-negative' : v < 0 ? 'dlq-positive' : 'dlq-neutral';
+          return `<span class="${cls}">${v > 0 ? '+' : ''}${v.toFixed(2)}%</span>`;
+        }
+
+        html += `<tr style="border-top:2px solid #0f3460">
+          <td><b style="color:#778">Delta (FRE-FNM)</b></td>
+          <td></td>
+          <td>${fmtDelta((ft > 0 ? fd.current/ft*100 : 0) - (nt > 0 ? nd.current/nt*100 : 0))}</td>
+          <td>${fmtDelta(fre30 - fnm30)}</td>
+          <td>${fmtDelta(fre60 - fnm60)}</td>
+          <td>${fmtDelta(freSDQ - fnmSDQ)}</td>
+          <td>${fmtDelta(delta)}</td>
+          <td></td>
+        </tr>`;
+      }
+
+      html += '</tbody></table>';
+
+      // Heat map controls
+      const hasData = freddieData || fannieData;
+      const hasBoth = freddieData && fannieData;
+      html += `<div class="heatmap-controls">
+        <b style="color:#e94560;font-size:0.78rem;">DLQ Heat Map:</b>
+        <label><input type="radio" name="heatmap" value="off" ${heatMapMode==='off'?'checked':''}> Off</label>
+        ${freddieData ? `<label><input type="radio" name="heatmap" value="freddie" ${heatMapMode==='freddie'?'checked':''}> Freddie</label>` : ''}
+        ${fannieData ? `<label><input type="radio" name="heatmap" value="fannie" ${heatMapMode==='fannie'?'checked':''}> Fannie</label>` : ''}
+        ${hasBoth ? `<label><input type="radio" name="heatmap" value="combined" ${heatMapMode==='combined'?'checked':''}> Combined</label>` : ''}
+        ${hasBoth ? `<label><input type="radio" name="heatmap" value="delta" ${heatMapMode==='delta'?'checked':''}> Delta (FRE-FNM)</label>` : ''}
+        <div class="heatmap-legend">
+          <span style="font-size:0.65rem">Low</span>
+          <div class="swatch" style="background:#4caf50"></div>
+          <div class="swatch" style="background:#8bc34a"></div>
+          <div class="swatch" style="background:#ffca28"></div>
+          <div class="swatch" style="background:#ff9800"></div>
+          <div class="swatch" style="background:#f44336"></div>
+          <div class="swatch" style="background:#b71c1c"></div>
+          <span style="font-size:0.65rem">High</span>
+        </div>
+      </div>`;
+
+      // State-level delinquency table (top 10 by SDQ)
+      const allStates = getAllStatesDlq();
+      if (allStates.length > 0) {
+        allStates.sort((a, b) => b.sdqRate - a.sdqRate);
+        html += '<div style="margin-top:12px;"><b style="color:#e94560;font-size:0.78rem;">Top States by SDQ Rate (90+ day):</b></div>';
+        html += '<table class="dlq-table" style="margin-top:4px;"><thead><tr>';
+        html += '<th>State</th><th>Loans</th>';
+        if (freddieData) html += '<th>FRE SDQ</th>';
+        if (fannieData) html += '<th>FNM SDQ</th>';
+        if (hasBoth) html += '<th>Delta</th>';
+        html += '<th>Combined SDQ</th>';
+        html += '</tr></thead><tbody>';
+
+        allStates.slice(0, 15).forEach(s => {
+          html += `<tr>
+            <td><b>${s.abbr}</b></td>
+            <td>${s.totalCount.toLocaleString()}</td>`;
+          if (freddieData) html += `<td>${s.freSDQ !== null ? s.freSDQ.toFixed(2) + '%' : '-'}</td>`;
+          if (fannieData) html += `<td>${s.fnmSDQ !== null ? s.fnmSDQ.toFixed(2) + '%' : '-'}</td>`;
+          if (hasBoth) {
+            const d = (s.freSDQ || 0) - (s.fnmSDQ || 0);
+            const cls = d > 0 ? 'dlq-negative' : d < 0 ? 'dlq-positive' : 'dlq-neutral';
+            html += `<td class="${cls}">${d > 0 ? '+' : ''}${d.toFixed(2)}%</td>`;
+          }
+          html += `<td style="color:${s.sdqRate > 3 ? '#ef5350' : s.sdqRate > 1 ? '#ffca28' : '#4caf50'};font-weight:600">${s.sdqRate.toFixed(2)}%</td>`;
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+      }
+
+      el.innerHTML = html;
+
+      // Attach heat map radio listeners
+      el.querySelectorAll('input[name="heatmap"]').forEach(radio => {
+        radio.addEventListener('change', function() { setHeatMapMode(this.value); });
+      });
+    }
+
+    function getAllStatesDlq() {
+      const states = {};
+      if (freddieData) {
+        Object.entries(freddieData.stateAgg).forEach(([abbr, sa]) => {
+          if (!states[abbr]) states[abbr] = { abbr, freCount: 0, fnmCount: 0, freD90: 0, fnmD90: 0 };
+          states[abbr].freCount = sa.count;
+          states[abbr].freD90 = sa.dlq.d90plus;
+        });
+      }
+      if (fannieData) {
+        Object.entries(fannieData.stateAgg).forEach(([abbr, sa]) => {
+          if (!states[abbr]) states[abbr] = { abbr, freCount: 0, fnmCount: 0, freD90: 0, fnmD90: 0 };
+          states[abbr].fnmCount = sa.count;
+          states[abbr].fnmD90 = sa.dlq.d90plus;
+        });
+      }
+      return Object.values(states).map(s => {
+        s.totalCount = s.freCount + s.fnmCount;
+        const totalD90 = s.freD90 + s.fnmD90;
+        s.sdqRate = s.totalCount > 0 ? (totalD90 / s.totalCount * 100) : 0;
+        s.freSDQ = s.freCount > 0 ? (s.freD90 / s.freCount * 100) : null;
+        s.fnmSDQ = s.fnmCount > 0 ? (s.fnmD90 / s.fnmCount * 100) : null;
+        return s;
+      }).filter(s => s.totalCount > 0);
+    }
+
+    // --- HPA Tab ---
+    function renderHPATab() {
+      const el = document.getElementById('hpa-content');
+      const hasHPA = (freddieData && Object.keys(freddieData.hpa).length > 0) ||
+                     (fannieData && Object.keys(fannieData.hpa).length > 0);
+
+      if (!hasHPA) {
+        el.innerHTML = `<div style="color:#778;">
+          HPA analysis requires loan tapes with ELTV (Estimated LTV) data.<br>
+          Implied HPA is computed from Original LTV vs Estimated LTV to show cumulative home price appreciation by vintage year and state.
+        </div>`;
+        return;
+      }
+
+      // Gather all states with HPA data
+      const hpaStates = new Set();
+      if (freddieData) Object.keys(freddieData.hpa).forEach(s => hpaStates.add(s));
+      if (fannieData) Object.keys(fannieData.hpa).forEach(s => hpaStates.add(s));
+      const sortedStates = [...hpaStates].sort();
+
+      let html = '<div class="hpa-controls">';
+      html += '<label style="color:#e94560;font-weight:600;">State:</label>';
+      html += '<select id="hpa-state-select">';
+      sortedStates.forEach(s => {
+        html += `<option value="${s}">${s}</option>`;
+      });
+      html += '</select>';
+      html += '<label style="color:#e94560;font-weight:600;">Source:</label>';
+      html += '<select id="hpa-source-select">';
+      html += '<option value="combined">Combined</option>';
+      if (freddieData && Object.keys(freddieData.hpa).length > 0) html += '<option value="freddie">Freddie Mac</option>';
+      if (fannieData && Object.keys(fannieData.hpa).length > 0) html += '<option value="fannie">Fannie Mae</option>';
+      html += '</select>';
+      html += '</div>';
+      html += '<div id="hpa-chart-container"></div>';
+
+      el.innerHTML = html;
+
+      document.getElementById('hpa-state-select').addEventListener('change', renderHPA);
+      document.getElementById('hpa-source-select').addEventListener('change', renderHPA);
+      renderHPA();
+    }
+
+    function renderHPA() {
+      const container = document.getElementById('hpa-chart-container');
+      if (!container) return;
+
+      const stateAbbr = document.getElementById('hpa-state-select')?.value;
+      const sourceVal = document.getElementById('hpa-source-select')?.value || 'combined';
+      if (!stateAbbr) return;
+
+      // Gather vintage data
+      const vintages = {};
+      function mergeHPA(data, label) {
+        if (!data?.hpa[stateAbbr]) return;
+        Object.entries(data.hpa[stateAbbr]).forEach(([yr, d]) => {
+          if (!vintages[yr]) vintages[yr] = { freddie: null, fannie: null, combined: { totalOrig: 0, totalCur: 0, count: 0 } };
+          vintages[yr][label] = d.cumHPA;
+          // We stored cumHPA as percentage already
+        });
+      }
+
+      if (sourceVal === 'combined' || sourceVal === 'freddie') {
+        if (freddieData?.hpa[stateAbbr]) {
+          Object.entries(freddieData.hpa[stateAbbr]).forEach(([yr, d]) => {
+            if (!vintages[yr]) vintages[yr] = { freddie: null, fannie: null };
+            vintages[yr].freddie = d.cumHPA;
+          });
+        }
+      }
+      if (sourceVal === 'combined' || sourceVal === 'fannie') {
+        if (fannieData?.hpa[stateAbbr]) {
+          Object.entries(fannieData.hpa[stateAbbr]).forEach(([yr, d]) => {
+            if (!vintages[yr]) vintages[yr] = { freddie: null, fannie: null };
+            vintages[yr].fannie = d.cumHPA;
+          });
+        }
+      }
+
+      const years = Object.keys(vintages).sort();
+      if (years.length === 0) {
+        container.innerHTML = '<div style="color:#778;">No HPA data for this state/source combination.</div>';
+        return;
+      }
+
+      // Find max absolute HPA for scaling
+      let maxAbs = 1;
+      years.forEach(yr => {
+        const v = vintages[yr];
+        if (v.freddie !== null) maxAbs = Math.max(maxAbs, Math.abs(v.freddie));
+        if (v.fannie !== null) maxAbs = Math.max(maxAbs, Math.abs(v.fannie));
+      });
+
+      let html = '<div class="hpa-chart-area"><div class="hpa-bars">';
+      html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px;padding-left:36px;font-size:0.65rem;color:#556;">';
+      html += `<span>-${maxAbs.toFixed(0)}%</span><span>0%</span><span>+${maxAbs.toFixed(0)}%</span></div>`;
+
+      years.forEach(yr => {
+        const v = vintages[yr];
+        // For combined, average available values
+        let displayVal;
+        if (sourceVal === 'combined') {
+          const vals = [v.freddie, v.fannie].filter(x => x !== null);
+          displayVal = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+        } else if (sourceVal === 'freddie') {
+          displayVal = v.freddie || 0;
+        } else {
+          displayVal = v.fannie || 0;
+        }
+
+        const barWidth = Math.min(Math.abs(displayVal) / maxAbs * 50, 50);
+        const isPos = displayVal >= 0;
+
+        html += `<div class="hpa-row">
+          <span class="hpa-year">${yr}</span>
+          <div class="hpa-bar-track">
+            <div class="hpa-bar-center"></div>
+            <div class="hpa-bar ${isPos ? 'positive' : 'negative'}" style="width:${barWidth}%;${isPos ? 'left:50%' : 'right:50%'}"></div>
+          </div>
+          <span class="hpa-value" style="color:${isPos ? '#4caf50' : '#ef5350'}">${displayVal > 0 ? '+' : ''}${displayVal.toFixed(1)}%</span>
+        </div>`;
+
+        // Show Freddie vs Fannie breakdown if both available and in combined mode
+        if (sourceVal === 'combined' && v.freddie !== null && v.fannie !== null) {
+          html += `<div style="display:flex;padding-left:36px;font-size:0.62rem;color:#667;margin-bottom:2px;">
+            <span style="margin-right:12px;color:#42a5f5">FRE: ${v.freddie > 0 ? '+' : ''}${v.freddie.toFixed(1)}%</span>
+            <span style="color:#4db6ac">FNM: ${v.fannie > 0 ? '+' : ''}${v.fannie.toFixed(1)}%</span>
+          </div>`;
+        }
+      });
+
+      html += '</div>';
+
+      // Summary stats
+      const allVals = years.map(yr => {
+        const v = vintages[yr];
+        if (sourceVal === 'combined') {
+          const vals = [v.freddie, v.fannie].filter(x => x !== null);
+          return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+        }
+        return sourceVal === 'freddie' ? (v.freddie || 0) : (v.fannie || 0);
+      });
+      const avgHPA = allVals.length > 0 ? allVals.reduce((a, b) => a + b, 0) / allVals.length : 0;
+      const maxHPA = Math.max(...allVals);
+      const minHPA = Math.min(...allVals);
+      const latestHPA = allVals[allVals.length - 1] || 0;
+
+      html += `<div class="hpa-summary">
+        <div style="color:#e94560;font-weight:600;margin-bottom:6px;">Summary — ${stateAbbr}</div>
+        <div class="stat-row"><span>Vintages</span><span class="val">${years[0]}–${years[years.length-1]}</span></div>
+        <div class="stat-row"><span>Latest Vintage HPA</span><span class="val" style="color:${latestHPA>=0?'#4caf50':'#ef5350'}">${latestHPA>0?'+':''}${latestHPA.toFixed(1)}%</span></div>
+        <div class="stat-row"><span>Avg Cum. HPA</span><span class="val">${avgHPA>0?'+':''}${avgHPA.toFixed(1)}%</span></div>
+        <div class="stat-row"><span>Max HPA</span><span class="val" style="color:#4caf50">+${maxHPA.toFixed(1)}%</span></div>
+        <div class="stat-row"><span>Min HPA</span><span class="val" style="color:${minHPA<0?'#ef5350':'#4caf50'}">${minHPA>0?'+':''}${minHPA.toFixed(1)}%</span></div>
+      </div>`;
+
+      html += '</div>';
+      html += '<div class="hpa-note">Implied cumulative HPA computed from Original LTV vs Estimated LTV by vintage year. Positive values indicate home price appreciation since origination.</div>';
+
+      container.innerHTML = html;
+    }
+
+    // ================================================================
+    //  CLEAR DATA
+    // ================================================================
+    function clearAllData() {
+      freddieData = null;
+      fannieData = null;
+      freddieLoanLayer.clearLayers();
+      fannieLoanLayer.clearLayers();
+      freddieZipLayer.clearLayers();
+      fannieZipLayer.clearLayers();
+      heatMapMode = 'off';
+      if (statesLayer) statesLayer.resetStyle();
+      document.getElementById('upload-status').innerHTML =
+        'Upload CRT/CAS pipe-delimited or CSV tapes.<br>Computes ERCF capital + delinquency analysis.';
+      document.getElementById('loaded-files').innerHTML = '';
+      document.getElementById('clear-btn').style.display = 'none';
+      document.getElementById('file-freddie').value = '';
+      document.getElementById('file-fannie').value = '';
+      document.getElementById('dash-title').textContent = 'Analysis Dashboard';
+      renderOverviewTab();
+      renderDelinquencyTab();
+      renderHPATab();
+    }
+
+    // ================================================================
+    //  UTILITIES
+    // ================================================================
+    function avg(arr) {
+      return arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+    }
+    function fmtM(val) { return val >= 1e9 ? `$${(val/1e9).toFixed(2)}B` : `$${(val/1e6).toFixed(1)}M`; }
+    function fmtK(val) { return val >= 1e6 ? `$${(val/1e6).toFixed(2)}M` : `$${(val/1e3).toFixed(0)}K`; }
+
     function getRWColor(rw) {
-      // Risk weight color: green (low) → yellow → orange → red (high)
       if (rw < 0.25) return '#4caf50';
       if (rw < 0.40) return '#8bc34a';
       if (rw < 0.55) return '#ffca28';
@@ -1074,22 +2011,14 @@
       return '#e94560';
     }
 
-    function clearLoanData() {
-      loanLayer.clearLayers();
-      zipLayer.clearLayers();
-      document.getElementById('upload-status').innerHTML =
-        'Freddie Mac CRT pipe-delimited or CSV with MSA column.<br>Computes ERCF risk-based capital per loan.';
-      document.getElementById('clear-btn').style.display = 'none';
-      document.getElementById('file-input').value = '';
-    }
-
-    // --- Close info panel on map click ---
+    // ================================================================
+    //  EVENT HANDLERS
+    // ================================================================
     map.on('click', () => {
       document.getElementById('info-panel').style.display = 'none';
+      document.getElementById('dash-title').textContent = 'Analysis Dashboard';
     });
 
-    // --- Hide loading indicator ---
-    // Hide as soon as any tiles load, or after 2s max
     darkBase.on('tileload', function onFirst() {
       document.getElementById('loading').style.display = 'none';
       darkBase.off('tileload', onFirst);
@@ -1098,9 +2027,7 @@
       document.getElementById('loading').style.display = 'none';
       darkBase.off('tileerror', onErr);
     });
-    setTimeout(() => {
-      document.getElementById('loading').style.display = 'none';
-    }, 2000);
+    setTimeout(() => { document.getElementById('loading').style.display = 'none'; }, 2000);
   </script>
 </body>
 </html>

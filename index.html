@@ -1086,12 +1086,19 @@
       let startRow = 0;
       let source = 'unknown';
 
-      // Auto-detect pipe-delimited formats
-      if (delimiter === '|' && firstCols.length >= 40) {
+      // Use sourceHint (from which button was clicked) to pick format directly
+      if (sourceHint === 'freddie' && delimiter === '|' && firstCols.length >= 40) {
+        fm = FMC; startRow = 0; source = 'Freddie Mac CRT';
+      } else if (sourceHint === 'fannie' && delimiter === '|' && firstCols.length >= 40) {
+        fm = FNMA; startRow = 0; source = 'Fannie Mae CAS';
+      }
+
+      // Auto-detect if sourceHint didn't match a pipe-delimited format
+      if (!fm && delimiter === '|' && firstCols.length >= 40) {
         const f0 = (firstCols[0] || '').trim();
         if (/^\d{6}$/.test(f0)) {
           fm = FMC; startRow = 0; source = 'Freddie Mac CRT';
-        } else if (/^[A-Z0-9]{2,6}$/i.test(f0) && firstCols.length >= 80) {
+        } else if (firstCols.length >= 80) {
           fm = FNMA; startRow = 0; source = 'Fannie Mae CAS';
         } else {
           const h = firstCols.map(c => c.trim().toUpperCase());
@@ -1103,7 +1110,7 @@
         }
       }
 
-      // Fallback: generic CSV/TSV
+      // Fallback: generic CSV/TSV with header row
       if (!fm) {
         const h = firstCols.map(c => c.trim().toUpperCase().replace(/"/g, ''));
         const msaIdx = h.findIndex(x => x === 'MSA' || x === 'CBSA' || x.includes('METROPOLITAN'));

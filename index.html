@@ -15,9 +15,10 @@
   <!-- TopoJSON client (bundled locally) -->
   <script src="lib/topojson-client.min.js"></script>
 
-  <!-- ERCF Calculator & ZIP3 Geo (bundled locally) -->
+  <!-- ERCF Calculator, ZIP3 Geo, FHFA HPI (bundled locally) -->
   <script src="lib/ercf.js?v=2"></script>
   <script src="lib/zip3-geo.js?v=2"></script>
+  <script src="lib/fhfa-hpi.js?v=1"></script>
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -148,6 +149,41 @@
     }
     .file-tag.freddie { background: #1565c0; color: #fff; }
     .file-tag.fannie { background: #00897b; color: #fff; }
+
+    /* HPA Slider Control */
+    .hpa-slider-control {
+      background: rgba(26, 26, 46, 0.95);
+      border: 1px solid #0f3460;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #e0e0ff;
+      font-size: 0.85rem;
+      min-width: 220px;
+    }
+    .hpa-slider-control h4 { margin-bottom: 6px; color: #e94560; font-size: 0.85rem; }
+    .hpa-slider-control .year-display {
+      text-align: center; font-size: 1.4rem; font-weight: 700;
+      color: #fff; margin: 4px 0;
+    }
+    .hpa-slider-control input[type="range"] {
+      width: 100%; cursor: pointer;
+      accent-color: #e94560;
+    }
+    .hpa-slider-control .year-range {
+      display: flex; justify-content: space-between;
+      font-size: 0.65rem; color: #667;
+    }
+    .hpa-slider-control .play-btn {
+      display: block; width: 100%; margin-top: 6px;
+      background: #0f3460; color: #e0e0ff; border: 1px solid #4a6fa5;
+      border-radius: 4px; padding: 4px 8px; cursor: pointer;
+      font-size: 0.75rem; text-align: center;
+    }
+    .hpa-slider-control .play-btn:hover { background: #1a4a80; }
+    .hpa-national-avg {
+      margin-top: 6px; padding-top: 6px; border-top: 1px solid #0f3460;
+      font-size: 0.72rem; color: #aab;
+    }
 
     /* Loading indicator */
     #loading {
@@ -447,7 +483,7 @@
         <div id="dlq-content" style="color:#778;">Upload loan tapes with delinquency data to see comparison.</div>
       </div>
       <div class="tab-pane" id="tab-hpa">
-        <div id="hpa-content" style="color:#778;">Upload loan tapes with ELTV data to see implied HPA by state.</div>
+        <div id="hpa-content" style="color:#778;">FHFA House Price Index data by state. Select the HPA tab to explore.</div>
       </div>
     </div>
   </div>
@@ -715,7 +751,8 @@
     let freddieData = null;  // { loans, byState, byMSA, byZip3, summary, hpa }
     let fannieData  = null;
     let stateFeatures = {};  // FIPS -> leaflet layer reference
-    let heatMapMode = 'off'; // off | freddie | fannie | combined | delta
+    let heatMapMode = 'off'; // off | freddie | fannie | combined | delta | fhfa
+    let fhfaYear = 2024;    // currently selected FHFA HPA year
 
     // ================================================================
     //  MAP SETUP
@@ -802,7 +839,16 @@
                   if (hpaSel) { hpaSel.value = info.abbr; renderHPA(); }
                 }
               });
-              layer.bindTooltip(info.name, { sticky: true });
+              layer.bindTooltip(function() {
+                if (heatMapMode === 'fhfa') {
+                  const hpi = FHFA_HPI[info.abbr];
+                  if (hpi && hpi[fhfaYear]) {
+                    const h = hpi[fhfaYear];
+                    return `<b>${info.name}</b><br>YoY HPA: ${h.hpa > 0 ? '+' : ''}${h.hpa.toFixed(1)}%<br>Index: ${h.idx.toFixed(1)}`;
+                  }
+                }
+                return info.name;
+              }, { sticky: true });
             }
           }
         }).addTo(map);
@@ -1017,6 +1063,103 @@
       return div;
     };
     legend.addTo(map);
+
+    // ================================================================
+    //  FHFA HPA SLIDER CONTROL
+    // ================================================================
+    const hpaSliderControl = L.control({ position: 'bottomleft' });
+    hpaSliderControl.onAdd = function () {
+      const div = L.DomUtil.create('div', 'hpa-slider-control');
+      // Determine year range from FHFA data
+      const allYears = Object.keys(FHFA_HPI['CA'] || {}).map(Number).filter(y => y >= 1992).sort((a, b) => a - b);
+      const minYear = allYears[0] || 1992;
+      const maxYear = allYears[allYears.length - 1] || 2025;
+      fhfaYear = maxYear;
+      div.innerHTML = `
+        <h4>FHFA House Price Index</h4>
+        <div class="year-display" id="hpa-year-display">${maxYear}</div>
+        <input type="range" id="hpa-year-slider" min="${minYear}" max="${maxYear}" value="${maxYear}" step="1" />
+        <div class="year-range"><span>${minYear}</span><span>${maxYear}</span></div>
+        <button class="play-btn" id="hpa-play-btn">&#9654; Play</button>
+        <div class="hpa-national-avg" id="hpa-national-avg"></div>
+        <div style="margin-top:6px;font-size:0.62rem;color:#667;">
+          <span style="color:#b71c1c;">&#9632;</span> &lt;-10%
+          <span style="color:#ef5350;">&#9632;</span> -5%
+          <span style="color:#ffca28;">&#9632;</span> 0%
+          <span style="color:#8bc34a;">&#9632;</span> +5%
+          <span style="color:#4caf50;">&#9632;</span> +10%
+          <span style="color:#1b5e20;">&#9632;</span> &gt;+20%
+        </div>
+      `;
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.disableScrollPropagation(div);
+      return div;
+    };
+    hpaSliderControl.addTo(map);
+
+    // Wire up slider and play button after control is on the map
+    setTimeout(() => {
+      const slider = document.getElementById('hpa-year-slider');
+      const display = document.getElementById('hpa-year-display');
+      const playBtn = document.getElementById('hpa-play-btn');
+      const avgEl = document.getElementById('hpa-national-avg');
+      let playInterval = null;
+
+      function updateFHFAOverlay(year) {
+        fhfaYear = year;
+        display.textContent = year;
+        slider.value = year;
+        // Compute national average HPA for this year
+        let totalHPA = 0, stateCount = 0;
+        Object.entries(FHFA_HPI).forEach(([st, years]) => {
+          if (years[year]) { totalHPA += years[year].hpa; stateCount++; }
+        });
+        const natAvg = stateCount > 0 ? (totalHPA / stateCount) : 0;
+        avgEl.innerHTML = `National Avg: <b style="color:${natAvg >= 0 ? '#4caf50' : '#ef5350'}">${natAvg > 0 ? '+' : ''}${natAvg.toFixed(1)}%</b> YoY`;
+        if (heatMapMode === 'fhfa') updateHeatMap();
+      }
+
+      slider.addEventListener('input', function() {
+        updateFHFAOverlay(parseInt(this.value));
+      });
+
+      // Activate FHFA overlay when slider is first touched
+      slider.addEventListener('mousedown', function() {
+        if (heatMapMode !== 'fhfa') {
+          heatMapMode = 'fhfa';
+          updateHeatMap();
+        }
+      });
+
+      playBtn.addEventListener('click', function() {
+        if (playInterval) {
+          clearInterval(playInterval);
+          playInterval = null;
+          playBtn.innerHTML = '&#9654; Play';
+          return;
+        }
+        heatMapMode = 'fhfa';
+        const minY = parseInt(slider.min);
+        const maxY = parseInt(slider.max);
+        let curY = parseInt(slider.value);
+        if (curY >= maxY) curY = minY;
+        playBtn.innerHTML = '&#9724; Stop';
+        updateFHFAOverlay(curY);
+        playInterval = setInterval(() => {
+          curY++;
+          if (curY > maxY) {
+            clearInterval(playInterval);
+            playInterval = null;
+            playBtn.innerHTML = '&#9654; Play';
+            return;
+          }
+          updateFHFAOverlay(curY);
+        }, 600);
+      });
+
+      // Initialize the national avg display
+      updateFHFAOverlay(fhfaYear);
+    }, 100);
 
     // ================================================================
     //  FIELD MAPS (with delinquency)
@@ -1476,6 +1619,20 @@
       if (!info) return;
       const abbr = info.abbr;
 
+      // FHFA HPA overlay mode
+      if (heatMapMode === 'fhfa') {
+        const stHPI = FHFA_HPI[abbr];
+        if (!stHPI || !stHPI[fhfaYear]) {
+          layer.setStyle({ ...defaultStateStyle, fillColor: '#333', fillOpacity: 0.15 });
+          return;
+        }
+        const hpa = stHPI[fhfaYear].hpa;
+        const color = getHPAColor(hpa);
+        const opacity = 0.25 + Math.min(Math.abs(hpa) / 25, 0.55);
+        layer.setStyle({ fillColor: color, fillOpacity: opacity, color: '#556', weight: 1.2, opacity: 0.8 });
+        return;
+      }
+
       let sdqRate = null;
       if (heatMapMode === 'freddie' && freddieData) {
         const sa = freddieData.stateAgg[abbr];
@@ -1526,6 +1683,20 @@
       if (rate < 3.5) return '#ff9800';
       if (rate < 5.0) return '#f44336';
       return '#b71c1c';
+    }
+
+    function getHPAColor(hpa) {
+      // Diverging: red (decline) -> yellow (flat) -> green (appreciation)
+      if (hpa <= -15) return '#b71c1c';
+      if (hpa <= -10) return '#e53935';
+      if (hpa <= -5)  return '#ef5350';
+      if (hpa <= -2)  return '#ff8a65';
+      if (hpa < 2)    return '#ffca28';
+      if (hpa < 5)    return '#c6e04c';
+      if (hpa < 10)   return '#8bc34a';
+      if (hpa < 15)   return '#4caf50';
+      if (hpa < 20)   return '#2e7d32';
+      return '#1b5e20';
     }
 
     function setHeatMapMode(mode) {
@@ -1815,25 +1986,16 @@
       }).filter(s => s.totalCount > 0);
     }
 
-    // --- HPA Tab ---
+    // --- HPA Tab (FHFA Data) ---
     function renderHPATab() {
       const el = document.getElementById('hpa-content');
-      const hasHPA = (freddieData && Object.keys(freddieData.hpa).length > 0) ||
-                     (fannieData && Object.keys(fannieData.hpa).length > 0);
 
-      if (!hasHPA) {
-        el.innerHTML = `<div style="color:#778;">
-          HPA analysis requires loan tapes with ELTV (Estimated LTV) data.<br>
-          Implied HPA is computed from Original LTV vs Estimated LTV to show cumulative home price appreciation by vintage year and state.
-        </div>`;
+      // Build state list from FHFA data
+      const sortedStates = Object.keys(FHFA_HPI).sort();
+      if (sortedStates.length === 0) {
+        el.innerHTML = '<div style="color:#778;">FHFA HPI data not loaded.</div>';
         return;
       }
-
-      // Gather all states with HPA data
-      const hpaStates = new Set();
-      if (freddieData) Object.keys(freddieData.hpa).forEach(s => hpaStates.add(s));
-      if (fannieData) Object.keys(fannieData.hpa).forEach(s => hpaStates.add(s));
-      const sortedStates = [...hpaStates].sort();
 
       let html = '<div class="hpa-controls">';
       html += '<label style="color:#e94560;font-weight:600;">State:</label>';
@@ -1842,19 +2004,13 @@
         html += `<option value="${s}">${s}</option>`;
       });
       html += '</select>';
-      html += '<label style="color:#e94560;font-weight:600;">Source:</label>';
-      html += '<select id="hpa-source-select">';
-      html += '<option value="combined">Combined</option>';
-      if (freddieData && Object.keys(freddieData.hpa).length > 0) html += '<option value="freddie">Freddie Mac</option>';
-      if (fannieData && Object.keys(fannieData.hpa).length > 0) html += '<option value="fannie">Fannie Mae</option>';
-      html += '</select>';
+      html += '<span style="color:#667;font-size:0.72rem;margin-left:8px;">Source: FHFA Purchase-Only HPI (Seasonally Adjusted)</span>';
       html += '</div>';
       html += '<div id="hpa-chart-container"></div>';
 
       el.innerHTML = html;
 
       document.getElementById('hpa-state-select').addEventListener('change', renderHPA);
-      document.getElementById('hpa-source-select').addEventListener('change', renderHPA);
       renderHPA();
     }
 
@@ -1863,70 +2019,28 @@
       if (!container) return;
 
       const stateAbbr = document.getElementById('hpa-state-select')?.value;
-      const sourceVal = document.getElementById('hpa-source-select')?.value || 'combined';
-      if (!stateAbbr) return;
+      if (!stateAbbr || !FHFA_HPI[stateAbbr]) return;
 
-      // Gather vintage data
-      const vintages = {};
-      function mergeHPA(data, label) {
-        if (!data?.hpa[stateAbbr]) return;
-        Object.entries(data.hpa[stateAbbr]).forEach(([yr, d]) => {
-          if (!vintages[yr]) vintages[yr] = { freddie: null, fannie: null, combined: { totalOrig: 0, totalCur: 0, count: 0 } };
-          vintages[yr][label] = d.cumHPA;
-          // We stored cumHPA as percentage already
-        });
-      }
+      const stData = FHFA_HPI[stateAbbr];
+      const years = Object.keys(stData).map(Number).filter(y => y >= 1992).sort((a, b) => a - b);
 
-      if (sourceVal === 'combined' || sourceVal === 'freddie') {
-        if (freddieData?.hpa[stateAbbr]) {
-          Object.entries(freddieData.hpa[stateAbbr]).forEach(([yr, d]) => {
-            if (!vintages[yr]) vintages[yr] = { freddie: null, fannie: null };
-            vintages[yr].freddie = d.cumHPA;
-          });
-        }
-      }
-      if (sourceVal === 'combined' || sourceVal === 'fannie') {
-        if (fannieData?.hpa[stateAbbr]) {
-          Object.entries(fannieData.hpa[stateAbbr]).forEach(([yr, d]) => {
-            if (!vintages[yr]) vintages[yr] = { freddie: null, fannie: null };
-            vintages[yr].fannie = d.cumHPA;
-          });
-        }
-      }
-
-      const years = Object.keys(vintages).sort();
       if (years.length === 0) {
-        container.innerHTML = '<div style="color:#778;">No HPA data for this state/source combination.</div>';
+        container.innerHTML = '<div style="color:#778;">No FHFA data for this state.</div>';
         return;
       }
 
       // Find max absolute HPA for scaling
       let maxAbs = 1;
-      years.forEach(yr => {
-        const v = vintages[yr];
-        if (v.freddie !== null) maxAbs = Math.max(maxAbs, Math.abs(v.freddie));
-        if (v.fannie !== null) maxAbs = Math.max(maxAbs, Math.abs(v.fannie));
-      });
+      years.forEach(yr => { maxAbs = Math.max(maxAbs, Math.abs(stData[yr].hpa)); });
 
       let html = '<div class="hpa-chart-area"><div class="hpa-bars">';
       html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px;padding-left:36px;font-size:0.65rem;color:#556;">';
       html += `<span>-${maxAbs.toFixed(0)}%</span><span>0%</span><span>+${maxAbs.toFixed(0)}%</span></div>`;
 
       years.forEach(yr => {
-        const v = vintages[yr];
-        // For combined, average available values
-        let displayVal;
-        if (sourceVal === 'combined') {
-          const vals = [v.freddie, v.fannie].filter(x => x !== null);
-          displayVal = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-        } else if (sourceVal === 'freddie') {
-          displayVal = v.freddie || 0;
-        } else {
-          displayVal = v.fannie || 0;
-        }
-
-        const barWidth = Math.min(Math.abs(displayVal) / maxAbs * 50, 50);
-        const isPos = displayVal >= 0;
+        const hpa = stData[yr].hpa;
+        const barWidth = Math.min(Math.abs(hpa) / maxAbs * 50, 50);
+        const isPos = hpa >= 0;
 
         html += `<div class="hpa-row">
           <span class="hpa-year">${yr}</span>
@@ -1934,45 +2048,33 @@
             <div class="hpa-bar-center"></div>
             <div class="hpa-bar ${isPos ? 'positive' : 'negative'}" style="width:${barWidth}%;${isPos ? 'left:50%' : 'right:50%'}"></div>
           </div>
-          <span class="hpa-value" style="color:${isPos ? '#4caf50' : '#ef5350'}">${displayVal > 0 ? '+' : ''}${displayVal.toFixed(1)}%</span>
+          <span class="hpa-value" style="color:${isPos ? '#4caf50' : '#ef5350'}">${hpa > 0 ? '+' : ''}${hpa.toFixed(1)}%</span>
         </div>`;
-
-        // Show Freddie vs Fannie breakdown if both available and in combined mode
-        if (sourceVal === 'combined' && v.freddie !== null && v.fannie !== null) {
-          html += `<div style="display:flex;padding-left:36px;font-size:0.62rem;color:#667;margin-bottom:2px;">
-            <span style="margin-right:12px;color:#42a5f5">FRE: ${v.freddie > 0 ? '+' : ''}${v.freddie.toFixed(1)}%</span>
-            <span style="color:#4db6ac">FNM: ${v.fannie > 0 ? '+' : ''}${v.fannie.toFixed(1)}%</span>
-          </div>`;
-        }
       });
 
       html += '</div>';
 
       // Summary stats
-      const allVals = years.map(yr => {
-        const v = vintages[yr];
-        if (sourceVal === 'combined') {
-          const vals = [v.freddie, v.fannie].filter(x => x !== null);
-          return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-        }
-        return sourceVal === 'freddie' ? (v.freddie || 0) : (v.fannie || 0);
-      });
-      const avgHPA = allVals.length > 0 ? allVals.reduce((a, b) => a + b, 0) / allVals.length : 0;
+      const allVals = years.map(yr => stData[yr].hpa);
+      const avgHPA = allVals.reduce((a, b) => a + b, 0) / allVals.length;
       const maxHPA = Math.max(...allVals);
       const minHPA = Math.min(...allVals);
       const latestHPA = allVals[allVals.length - 1] || 0;
+      const latestIdx = stData[years[years.length - 1]].idx;
 
       html += `<div class="hpa-summary">
-        <div style="color:#e94560;font-weight:600;margin-bottom:6px;">Summary — ${stateAbbr}</div>
-        <div class="stat-row"><span>Vintages</span><span class="val">${years[0]}–${years[years.length-1]}</span></div>
-        <div class="stat-row"><span>Latest Vintage HPA</span><span class="val" style="color:${latestHPA>=0?'#4caf50':'#ef5350'}">${latestHPA>0?'+':''}${latestHPA.toFixed(1)}%</span></div>
-        <div class="stat-row"><span>Avg Cum. HPA</span><span class="val">${avgHPA>0?'+':''}${avgHPA.toFixed(1)}%</span></div>
-        <div class="stat-row"><span>Max HPA</span><span class="val" style="color:#4caf50">+${maxHPA.toFixed(1)}%</span></div>
-        <div class="stat-row"><span>Min HPA</span><span class="val" style="color:${minHPA<0?'#ef5350':'#4caf50'}">${minHPA>0?'+':''}${minHPA.toFixed(1)}%</span></div>
+        <div style="color:#e94560;font-weight:600;margin-bottom:6px;">FHFA HPI — ${stateAbbr}</div>
+        <div class="stat-row"><span>Period</span><span class="val">${years[0]}–${years[years.length-1]}</span></div>
+        <div class="stat-row"><span>Current Index</span><span class="val">${latestIdx.toFixed(1)}</span></div>
+        <div class="stat-row"><span>Latest YoY</span><span class="val" style="color:${latestHPA>=0?'#4caf50':'#ef5350'}">${latestHPA>0?'+':''}${latestHPA.toFixed(1)}%</span></div>
+        <div class="stat-row"><span>Avg Annual HPA</span><span class="val">${avgHPA>0?'+':''}${avgHPA.toFixed(1)}%</span></div>
+        <div class="stat-row"><span>Best Year</span><span class="val" style="color:#4caf50">+${maxHPA.toFixed(1)}%</span></div>
+        <div class="stat-row"><span>Worst Year</span><span class="val" style="color:${minHPA<0?'#ef5350':'#4caf50'}">${minHPA>0?'+':''}${minHPA.toFixed(1)}%</span></div>
+        <div class="stat-row"><span>Cumulative (since 1991)</span><span class="val">${latestIdx > 0 ? '+' : ''}${(latestIdx - 100).toFixed(1)}%</span></div>
       </div>`;
 
       html += '</div>';
-      html += '<div class="hpa-note">Implied cumulative HPA computed from Original LTV vs Estimated LTV by vintage year. Positive values indicate home price appreciation since origination.</div>';
+      html += '<div class="hpa-note">FHFA Purchase-Only House Price Index, seasonally adjusted. YoY change computed from Q4 index values. Base: 1991 Q1 = 100.</div>';
 
       container.innerHTML = html;
     }
@@ -2035,6 +2137,9 @@
       darkBase.off('tileerror', onErr);
     });
     setTimeout(() => { document.getElementById('loading').style.display = 'none'; }, 2000);
+
+    // Initialize FHFA HPA tab on load
+    renderHPATab();
   </script>
 </body>
 </html>

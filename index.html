@@ -1165,6 +1165,8 @@
     //  FIELD MAPS (with delinquency)
     // ================================================================
     // Freddie Mac CRT Reference Pool (~90 fields, pipe-delimited, NO header)
+    // Layout per official CRT Reference Pool Disclosure File Layout v3.7 (Sep 2024)
+    // Field positions are 0-indexed (doc is 1-indexed)
     const FMC = {
       PERIOD: 0, POOL: 1, LOAN_ID: 2, AMORT_TYPE: 3, SELLER: 4,
       STATE: 5, ZIP: 6, MSA: 7,
@@ -1172,7 +1174,17 @@
       PURPOSE: 14, CHANNEL: 15, PROP_TYPE: 16, NUM_UNITS: 17,
       OCC_STATUS: 18, FTHB: 20,
       FICO: 22, OLTV: 23, OCLTV: 24, DTI: 25, MI_PCT: 26,
-      LOAN_AGE: 33, DLQ_STATUS: 34, CUR_UPB: 39, ELTV: 59, IO: -1
+      LOAN_AGE: 33, DLQ_STATUS: 36, CUR_UPB: 39, ELTV: 59, IO: -1
+    };
+
+    // Freddie Mac Standard SFLLD Origination File (32 fields, pipe-delimited, NO header)
+    const FMC_ORIG = {
+      FICO: 0, MSA: 4, MI_PCT: 5, NUM_UNITS: 6, OCC_STATUS: 7,
+      OCLTV: 8, DTI: 9, ORIG_UPB: 10, OLTV: 11, ORIG_RATE: 12,
+      CHANNEL: 13, AMORT_TYPE: 15, STATE: 16, PROP_TYPE: 17, ZIP: 18,
+      LOAN_ID: 19, PURPOSE: 20, ORIG_TERM: 21,
+      IO: 30, PERIOD: -1, POOL: -1, UPB_ISSUANCE: -1,
+      LOAN_AGE: -1, DLQ_STATUS: -1, CUR_UPB: -1, ELTV: -1, FTHB: 2, SELLER: 23
     };
 
     // Fannie Mae CAS/CIRT (~104 fields, pipe-delimited, NO header)
@@ -1229,14 +1241,19 @@
       let startRow = 0;
       let source = 'unknown';
 
-      // Use sourceHint (from which button was clicked) to pick format directly
-      if (sourceHint === 'freddie' && delimiter === '|' && firstCols.length >= 40) {
-        fm = FMC; startRow = 0; source = 'Freddie Mac CRT';
+      // Use sourceHint + field count to pick the right format
+      if (sourceHint === 'freddie' && delimiter === '|') {
+        if (firstCols.length >= 40) {
+          fm = FMC; startRow = 0; source = 'Freddie Mac CRT';
+        } else if (firstCols.length >= 20 && firstCols.length < 40) {
+          // Standard SFLLD origination file (~32 fields)
+          fm = FMC_ORIG; startRow = 0; source = 'Freddie Mac SFLLD';
+        }
       } else if (sourceHint === 'fannie' && delimiter === '|' && firstCols.length >= 40) {
         fm = FNMA; startRow = 0; source = 'Fannie Mae CAS';
       }
 
-      // Auto-detect if sourceHint didn't match a pipe-delimited format
+      // Auto-detect if sourceHint didn't match
       if (!fm && delimiter === '|' && firstCols.length >= 40) {
         const f0 = (firstCols[0] || '').trim();
         if (/^\d{6}$/.test(f0)) {
